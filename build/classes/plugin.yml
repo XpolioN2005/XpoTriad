@@ -1,0 +1,4 @@
+name: XpoTriad
+version: 1.0.0
+main: dev.xpolion.xpotriad.Main
+api-version: "26.3"
