@@ -3,13 +3,25 @@ package dev.xpolion.xpotriad.fragment;
 import dev.xpolion.xpotriad.AbilityContext;
 import dev.xpolion.xpotriad.Fragment;
 import dev.xpolion.xpotriad.effects.SpeedEffect;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+
+import java.util.List;
 
 public final class SpeedFragment extends Fragment {
 
     private final SpeedEffect effect = new SpeedEffect();
 
     public SpeedFragment() {
-        super("speed", "Speed");
+        super(
+                "speed",
+                ChatColor.AQUA + "Speed Fragment",
+                Material.FEATHER,
+                List.of(
+                        ChatColor.GRAY + "Grants increased movement speed."
+                ),
+                true
+        );
     }
 
     @Override

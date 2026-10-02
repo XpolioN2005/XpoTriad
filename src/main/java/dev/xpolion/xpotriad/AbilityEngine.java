@@ -23,24 +23,28 @@ public final class AbilityEngine {
         long delay = ability.getDelay(stage);
 
         plugin.getServer().getScheduler().runTaskLater(
-            plugin,
-            () -> {
-                Fragment fragment = ability.getFragment(stage);
+                plugin,
+                () -> {
+                    if (!player.isOnline()) {
+                        return;
+                    }
 
-                if (fragment != null) {
-                    AbilityContext context =
-                        new AbilityContext(player, ability);
+                    Fragment fragment = ability.getFragment(stage);
 
-                    fragment.execute(context);
-                }
+                    if (fragment != null) {
+                        AbilityContext context =
+                                new AbilityContext(player, ability);
 
-                Ability.Stage nextStage = getNextStage(stage);
+                        fragment.execute(context);
+                    }
 
-                if (nextStage != null) {
-                    executeStage(player, ability, nextStage);
-                }
-            },
-            delay
+                    Ability.Stage nextStage = getNextStage(stage);
+
+                    if (nextStage != null) {
+                        executeStage(player, ability, nextStage);
+                    }
+                },
+                delay
         );
     }
 

@@ -3,13 +3,25 @@ package dev.xpolion.xpotriad.fragment;
 import dev.xpolion.xpotriad.AbilityContext;
 import dev.xpolion.xpotriad.Fragment;
 import dev.xpolion.xpotriad.effects.ExplosionEffect;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+
+import java.util.List;
 
 public final class ExplosionFragment extends Fragment {
 
     private final ExplosionEffect effect = new ExplosionEffect();
 
     public ExplosionFragment() {
-        super("explosion", "Explosion");
+        super(
+                "explosion",
+                ChatColor.RED + "Explosion Fragment",
+                Material.FIRE_CHARGE,
+                List.of(
+                        ChatColor.GRAY + "Creates an explosion."
+                ),
+                true
+        );
     }
 
     @Override
