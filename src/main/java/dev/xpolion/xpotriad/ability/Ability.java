@@ -1,4 +1,6 @@
-package dev.xpolion.xpotriad;
+package dev.xpolion.xpotriad.ability;
+
+import dev.xpolion.xpotriad.fragment.Fragment;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -18,14 +20,9 @@ public final class Ability {
 
     private final WeaponType weaponType;
     private final Map<Stage, Fragment> fragments = new EnumMap<>(Stage.class);
-    private final Map<Stage, Long> delays = new EnumMap<>(Stage.class);
 
     public Ability(WeaponType weaponType) {
         this.weaponType = weaponType;
-
-        for (Stage stage : Stage.values()) {
-            delays.put(stage, 0L);
-        }
     }
 
     public void setFragment(Stage stage, Fragment fragment) {
@@ -34,18 +31,6 @@ public final class Ability {
 
     public Fragment getFragment(Stage stage) {
         return fragments.get(stage);
-    }
-
-    public void setDelay(Stage stage, long ticks) {
-        if (ticks < 0) {
-            throw new IllegalArgumentException("Delay cannot be negative");
-        }
-
-        delays.put(stage, ticks);
-    }
-
-    public long getDelay(Stage stage) {
-        return delays.getOrDefault(stage, 0L);
     }
 
     public WeaponType getWeaponType() {

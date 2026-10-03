@@ -1,7 +1,6 @@
 package dev.xpolion.xpotriad.fragment;
 
-import dev.xpolion.xpotriad.AbilityContext;
-import dev.xpolion.xpotriad.Fragment;
+import dev.xpolion.xpotriad.ability.AbilityContext;
 import dev.xpolion.xpotriad.effects.InvisibilityEffect;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -20,7 +19,8 @@ public final class InvisibilityFragment extends Fragment {
                 List.of(
                         ChatColor.GRAY + "Grants invisibility."
                 ),
-                true
+                true,
+                10L
         );
     }
 

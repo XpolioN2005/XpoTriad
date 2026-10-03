@@ -1,5 +1,7 @@
-package dev.xpolion.xpotriad;
+package dev.xpolion.xpotriad.ability;
 
+import dev.xpolion.xpotriad.fragment.Fragment;
+import dev.xpolion.xpotriad.fragment.FragmentRegistry;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -12,6 +14,19 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Manages the engraving and reading of Ability definitions on ItemStacks using PDC.
+ *
+ * PDC keys stored:
+ *   xpotriad:ability         – presence marker
+ *   xpotriad:weapon_type     – MELEE / RANGED
+ *   xpotriad:pre_cast_fragment
+ *   xpotriad:cast_fragment
+ *   xpotriad:post_cast_fragment
+ *
+ * No delay keys are stored; execution times live in Fragment definitions only.
+ * Lore is display-only; PDC is authoritative.
+ */
 public final class AbilityItem {
 
     private static final String ABILITY_MARKER = "ability";
@@ -19,37 +34,28 @@ public final class AbilityItem {
     private static NamespacedKey abilityKey;
     private static NamespacedKey weaponTypeKey;
 
-    private static final NamespacedKey[] fragmentKeys = new NamespacedKey[Ability.Stage.values().length];
-    private static final NamespacedKey[] delayKeys = new NamespacedKey[Ability.Stage.values().length];
+    private static final NamespacedKey[] fragmentKeys =
+            new NamespacedKey[Ability.Stage.values().length];
 
     private AbilityItem() {
     }
 
     public static void initialize(JavaPlugin plugin) {
-        abilityKey = new NamespacedKey(plugin, "ability");
+        abilityKey    = new NamespacedKey(plugin, "ability");
         weaponTypeKey = new NamespacedKey(plugin, "weapon_type");
 
-        fragmentKeys[Ability.Stage.PRE_CAST.ordinal()] =
+        fragmentKeys[Ability.Stage.PRE_CAST.ordinal()]  =
                 new NamespacedKey(plugin, "pre_cast_fragment");
-        delayKeys[Ability.Stage.PRE_CAST.ordinal()] =
-                new NamespacedKey(plugin, "pre_cast_delay");
-
-        fragmentKeys[Ability.Stage.CAST.ordinal()] =
+        fragmentKeys[Ability.Stage.CAST.ordinal()]      =
                 new NamespacedKey(plugin, "cast_fragment");
-        delayKeys[Ability.Stage.CAST.ordinal()] =
-                new NamespacedKey(plugin, "cast_delay");
-
         fragmentKeys[Ability.Stage.POST_CAST.ordinal()] =
                 new NamespacedKey(plugin, "post_cast_fragment");
-        delayKeys[Ability.Stage.POST_CAST.ordinal()] =
-                new NamespacedKey(plugin, "post_cast_delay");
     }
 
     public static void engrave(ItemStack item, Ability ability) {
         if (item == null || item.getType() == Material.AIR) {
             throw new IllegalArgumentException("Cannot engrave an empty item");
         }
-
         if (ability == null) {
             throw new IllegalArgumentException("Ability cannot be null");
         }
@@ -62,38 +68,18 @@ public final class AbilityItem {
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
-        pdc.set(
-                abilityKey,
-                PersistentDataType.STRING,
-                ABILITY_MARKER
-        );
-
-        pdc.set(
-                weaponTypeKey,
-                PersistentDataType.STRING,
-                ability.getWeaponType().name()
-        );
+        pdc.set(abilityKey, PersistentDataType.STRING, ABILITY_MARKER);
+        pdc.set(weaponTypeKey, PersistentDataType.STRING, ability.getWeaponType().name());
 
         for (Ability.Stage stage : Ability.Stage.values()) {
             int index = stage.ordinal();
-
             Fragment fragment = ability.getFragment(stage);
 
             if (fragment != null) {
-                pdc.set(
-                        fragmentKeys[index],
-                        PersistentDataType.STRING,
-                        fragment.getId()
-                );
+                pdc.set(fragmentKeys[index], PersistentDataType.STRING, fragment.getId());
             } else {
                 pdc.remove(fragmentKeys[index]);
             }
-
-            pdc.set(
-                    delayKeys[index],
-                    PersistentDataType.LONG,
-                    ability.getDelay(stage)
-            );
         }
 
         meta.setLore(createLore(ability));
@@ -113,10 +99,7 @@ public final class AbilityItem {
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
-        String weaponTypeName = pdc.get(
-                weaponTypeKey,
-                PersistentDataType.STRING
-        );
+        String weaponTypeName = pdc.get(weaponTypeKey, PersistentDataType.STRING);
 
         if (weaponTypeName == null) {
             return null;
@@ -126,7 +109,7 @@ public final class AbilityItem {
 
         try {
             weaponType = Ability.WeaponType.valueOf(weaponTypeName);
-        } catch (IllegalArgumentException exception) {
+        } catch (IllegalArgumentException e) {
             return null;
         }
 
@@ -135,15 +118,7 @@ public final class AbilityItem {
         for (Ability.Stage stage : Ability.Stage.values()) {
             int index = stage.ordinal();
 
-            String fragmentId = pdc.get(
-                    fragmentKeys[index],
-                    PersistentDataType.STRING
-            );
-
-            Long delay = pdc.get(
-                    delayKeys[index],
-                    PersistentDataType.LONG
-            );
+            String fragmentId = pdc.get(fragmentKeys[index], PersistentDataType.STRING);
 
             if (fragmentId != null) {
                 Fragment fragment = FragmentRegistry.get(fragmentId);
@@ -153,10 +128,6 @@ public final class AbilityItem {
                 }
 
                 ability.setFragment(stage, fragment);
-            }
-
-            if (delay != null) {
-                ability.setDelay(stage, delay);
             }
         }
 
@@ -182,32 +153,19 @@ public final class AbilityItem {
         return ABILITY_MARKER.equals(marker);
     }
 
+    // -------------------------------------------------------------------------
+    // Lore helpers (display-only)
+    // -------------------------------------------------------------------------
+
     private static List<String> createLore(Ability ability) {
         List<String> lore = new ArrayList<>();
 
         lore.add(ChatColor.DARK_PURPLE + "Ability");
         lore.add("");
 
-        addStageLore(
-                lore,
-                "Pre-Cast",
-                ability,
-                Ability.Stage.PRE_CAST
-        );
-
-        addStageLore(
-                lore,
-                "Cast",
-                ability,
-                Ability.Stage.CAST
-        );
-
-        addStageLore(
-                lore,
-                "Post-Cast",
-                ability,
-                Ability.Stage.POST_CAST
-        );
+        addStageLore(lore, "Pre-Cast",  ability, Ability.Stage.PRE_CAST);
+        addStageLore(lore, "Cast",      ability, Ability.Stage.CAST);
+        addStageLore(lore, "Post-Cast", ability, Ability.Stage.POST_CAST);
 
         return lore;
     }
@@ -226,28 +184,12 @@ public final class AbilityItem {
             lore.add(ChatColor.GRAY + "  Empty");
         } else {
             lore.add(
-                    ChatColor.WHITE
-                            + "  "
-                            + ChatColor.stripColor(fragment.getDisplayName())
-            );
-
-            lore.add(
-                    ChatColor.GRAY
-                            + "  Delay: "
-                            + formatDelay(ability.getDelay(stage))
+                ChatColor.WHITE
+                    + "  "
+                    + ChatColor.stripColor(fragment.getDisplayName())
             );
         }
 
         lore.add("");
-    }
-
-    private static String formatDelay(long ticks) {
-        double seconds = ticks / 20.0;
-
-        if (seconds == Math.floor(seconds)) {
-            return String.format("%.0fs", seconds);
-        }
-
-        return String.format("%.1fs", seconds);
     }
 }

@@ -1,4 +1,4 @@
-package dev.xpolion.xpotriad;
+package dev.xpolion.xpotriad.fragment;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
@@ -7,6 +7,13 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/**
+ * Manages physical Fragment item creation and identification.
+ *
+ * PDC keys:
+ *   xpotriad:item_type   = "fragment"
+ *   xpotriad:fragment_id = <fragment id>
+ */
 public final class FragmentItem {
 
     private static final String ITEM_TYPE = "fragment";
@@ -18,8 +25,8 @@ public final class FragmentItem {
     }
 
     public static void initialize(JavaPlugin plugin) {
-        itemTypeKey = new NamespacedKey(plugin, "item_type");
-        fragmentIdKey = new NamespacedKey(plugin, "fragment_id");
+        itemTypeKey    = new NamespacedKey(plugin, "item_type");
+        fragmentIdKey  = new NamespacedKey(plugin, "fragment_id");
     }
 
     public static ItemStack create(Fragment fragment) {
@@ -46,20 +53,10 @@ public final class FragmentItem {
             meta.setEnchantmentGlintOverride(true);
         }
 
-        PersistentDataContainer pdc =
-                meta.getPersistentDataContainer();
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
-        pdc.set(
-                itemTypeKey,
-                PersistentDataType.STRING,
-                ITEM_TYPE
-        );
-
-        pdc.set(
-                fragmentIdKey,
-                PersistentDataType.STRING,
-                fragment.getId()
-        );
+        pdc.set(itemTypeKey,   PersistentDataType.STRING, ITEM_TYPE);
+        pdc.set(fragmentIdKey, PersistentDataType.STRING, fragment.getId());
 
         item.setItemMeta(meta);
 
@@ -111,5 +108,4 @@ public final class FragmentItem {
 
         return FragmentRegistry.get(fragmentId);
     }
-
 }

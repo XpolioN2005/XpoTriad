@@ -1,12 +1,12 @@
-package dev.xpolion.xpotriad;
-
-import dev.xpolion.xpotriad.fragment.ExplosionFragment;
-import dev.xpolion.xpotriad.fragment.InvisibilityFragment;
-import dev.xpolion.xpotriad.fragment.SpeedFragment;
+package dev.xpolion.xpotriad.fragment;
 
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Static registry of all registered Fragment definitions.
+ * Fragment IDs map to concrete Fragment instances.
+ */
 public final class FragmentRegistry {
 
     private static final Map<String, Fragment> FRAGMENTS = new HashMap<>();
@@ -17,14 +17,14 @@ public final class FragmentRegistry {
         register(new ExplosionFragment());
     }
 
+    private FragmentRegistry() {
+    }
+
     private static void register(Fragment fragment) {
         FRAGMENTS.put(fragment.getId(), fragment);
     }
 
     public static Fragment get(String id) {
         return FRAGMENTS.get(id);
-    }
-
-    private FragmentRegistry() {
     }
 }

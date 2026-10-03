@@ -1,7 +1,6 @@
 package dev.xpolion.xpotriad.fragment;
 
-import dev.xpolion.xpotriad.AbilityContext;
-import dev.xpolion.xpotriad.Fragment;
+import dev.xpolion.xpotriad.ability.AbilityContext;
 import dev.xpolion.xpotriad.effects.ExplosionEffect;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -20,7 +19,8 @@ public final class ExplosionFragment extends Fragment {
                 List.of(
                         ChatColor.GRAY + "Creates an explosion."
                 ),
-                true
+                true,
+                0L
         );
     }
 
