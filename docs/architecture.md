@@ -8,33 +8,28 @@ src/main/java/dev/xpolion/xpotriad/
 ├── Main.java                          ← Plugin entry point
 │
 ├── ability/
-│   ├── Ability.java                   ← Data: weapon type + 3 fragment slots
-│   ├── AbilityContext.java            ← Runtime execution record (source + ability + targeting)
+│   ├── Ability.java                   ← Data: weapon type + 3 fragment slots + calculateCooldown()
+│   ├── AbilityContext.java            ← Runtime execution record (source + ability)
 │   ├── AbilityEngine.java             ← Stage sequencer + timing
-│   ├── AbilityItem.java               ← PDC read/write for Ability on ItemStacks
-│   ├── AbilityListener.java           ← Event listener (melee + ranged)
-│   └── ActivationRegistry.java        ← UUID → AbilityContext map for projectile tracking
+│   ├── AbilityItem.java               ← PDC read/write and item-specific cooldown for Ability on ItemStacks
+│   └── AbilityListener.java           ← Event listener (right-click activation & cooldown gating)
 │
 ├── fragment/
-│   ├── Fragment.java                  ← Abstract base: id, displayName, material, lore, glint, executionTime
+│   ├── Fragment.java                  ← Base: id, displayName, material, lore, glint, executionTime, rarity, cooldownModifier, effect
 │   ├── FragmentItem.java              ← PDC read/write for Fragment physical items
 │   ├── FragmentRegistry.java          ← Static id → Fragment lookup
-│   ├── InvisibilityFragment.java      ← executionTime = 10 ticks
-│   ├── SpeedFragment.java             ← executionTime = 20 ticks
-│   └── ExplosionFragment.java         ← executionTime = 0 ticks
+│   ├── InvisibilityFragment.java      ← executionTime = 10 ticks, UNCOMMON, cooldownModifier = +10 ticks
+│   ├── SpeedFragment.java             ← executionTime = 20 ticks, COMMON, cooldownModifier = 0 ticks
+│   └── ExplosionFragment.java         ← executionTime = 0 ticks, RARE, cooldownModifier = +40 ticks
 │
 ├── effects/
 │   ├── Effect.java                    ← Interface: void apply(AbilityContext)
 │   ├── InvisibilityEffect.java        ← Applies INVISIBILITY potion to source
 │   ├── SpeedEffect.java               ← Applies SPEED potion to source
-│   └── ExplosionEffect.java           ← Creates explosion at targeting origin
+│   └── ExplosionEffect.java           ← Creates explosion; queries TargetResolver for nearby entities
 │
 └── targeting/
-    ├── Targeting.java                 ← Interface: getType() + resolve(context)
-    ├── TargetingType.java             ← Enum: SINGLE, AOE
-    ├── SingleTargeting.java           ← One pre-determined entity (or null)
-    ├── AoeTargeting.java              ← Origin + radius; resolves on demand
-    └── TargetResolver.java            ← Static utility: entitiesNear(origin, radius)
+    └── TargetResolver.java            ← Concrete spatial utility: raycast() and entitiesNear()
 ```
 
 ---
@@ -44,16 +39,23 @@ src/main/java/dev/xpolion/xpotriad/
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                        Detection                        │
-│  EntityDamageByEntityEvent   PlayerInteractEvent        │
-│          (MELEE)                  (RANGED)              │
+│           PlayerInteractEvent (Right-Click)             │
+│                 (Main hand enforced)                    │
+└────────────────────────┬────────────────────────────────┘
+                         │ checks & applies
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│                  Item-Specific Cooldown                 │
+│   PDC: xpotriad:cooldown_until on held ItemStack        │
+│   Base: 20 ticks (1s) + Fragment modifiers             │
+│   Clamped: 0..300 ticks (0..15s)                        │
 └────────────────────────┬────────────────────────────────┘
                          │ creates
                          ▼
 ┌─────────────────────────────────────────────────────────┐
 │                    AbilityContext                        │
 │   source: Player                                        │
-│   ability: Ability  (WeaponType + 3 Fragment slots)     │
-│   targeting: Targeting  (SINGLE or AOE)                 │
+│   ability: Ability (WeaponType + 3 Fragment slots)      │
 └────────────────────────┬────────────────────────────────┘
                          │ passed to
                          ▼
@@ -75,7 +77,8 @@ src/main/java/dev/xpolion/xpotriad/
 ┌─────────────────────────────────────────────────────────┐
 │                       Effect                            │
 │   effect.apply(context)                                 │
-│   may call context.getTargeting().resolve(context)      │
+│   may call TargetResolver.raycast(...) or               │
+│            TargetResolver.entitiesNear(...)             │
 └────────────────────────┬────────────────────────────────┘
                          │ changes
                          ▼
@@ -89,75 +92,89 @@ src/main/java/dev/xpolion/xpotriad/
 ### `Ability`
 - Stores `WeaponType` (`MELEE` / `RANGED`) and an `EnumMap<Stage, Fragment>`.
 - Three stages: `PRE_CAST`, `CAST`, `POST_CAST`.
-- Does **not** store delays or timing — those live in each `Fragment`.
+- Provides `calculateCooldown()`:
+  - Base cooldown: 20 ticks.
+  - Adds each fragment's `cooldownModifier`.
+  - Clamps the result between 0 and 300 ticks.
+- Does **not** store runtime cooldown state.
 
 ### `AbilityContext`
 - Represents **one active execution** of an Ability.
-- Immutable fields: `source` (Player), `ability` (Ability), `targeting` (Targeting).
-- The same instance is passed through all three stages.
-- There is **no `AbilityActivation` wrapper** around it.
+- Contains only:
+  - `Player source`
+  - `Ability ability`
+- Does not contain targeting, target lists, or cooldown state.
+- Passed through all three stages.
 
 ### `AbilityEngine`
 - Receives an `AbilityContext` and sequences stages using the Paper scheduler.
-- Per stage: execute fragment → schedule next stage after `executionTime + 5` ticks.
-- Empty stage (no Fragment): advance immediately, no buffer.
-- Never searches for targets, never does raytrace.
+- Timing per stage: execute fragment → schedule next stage after `executionTime + 5` ticks buffer.
+- Empty stage (no Fragment): advance immediately (0 ticks), no buffer.
+- Never searches for targets, never performs raycasts, never manages cooldowns, and knows nothing about ItemStacks.
 
 ### `AbilityItem`
-- Static utility: `engrave(item, ability)` writes PDC, `read(item)` reconstructs Ability.
-- PDC keys: `ability`, `weapon_type`, `pre_cast_fragment`, `cast_fragment`, `post_cast_fragment`.
-- No delay keys stored. Fragment execution times live in Fragment definitions only.
+- Static utility for ItemStacks using Bukkit PDC.
+- PDC keys:
+  - `xpotriad:ability`: marker string
+  - `xpotriad:item_type`: `"ability"`
+  - `xpotriad:ability_id`: unique UUID
+  - `xpotriad:weapon_type`: `"MELEE"` or `"RANGED"`
+  - `xpotriad:pre_cast_fragment`, `xpotriad:cast_fragment`, `xpotriad:post_cast_fragment`
+  - `xpotriad:cooldown_until`: epoch timestamp in milliseconds
+- Handles item-specific cooldowns:
+  - `isOnCooldown(ItemStack item)`
+  - `getRemainingCooldownTicks(ItemStack item)`
+  - `applyCooldown(ItemStack item, long cooldownTicks)` (modifies the actual held item's metadata)
+- `read(item)` safely handles unknown fragment IDs and missing PDC values without crashing.
 
 ### `AbilityListener`
-- **Melee**: listens on `EntityDamageByEntityEvent`. Reads MELEE ability from held item. Creates `SingleTargeting(victim)`. Runs engine.
-- **Ranged**: listens on `PlayerInteractEvent` (right-click). Launches a Snowball projectile tagged with `xpotriad:context_id`. Stores context in `ActivationRegistry`.
-- **Projectile hit**: listens on `ProjectileHitEvent`. Reads `context_id`, removes from registry, finalizes targeting (entity → Single, block → AoE), runs engine.
-
-### `ActivationRegistry`
-- `Map<UUID, AbilityContext>` backing a `ConcurrentHashMap`.
-- Entries are removed on `ProjectileHitEvent` to prevent leaks.
+- Listens for `PlayerInteractEvent` on `EquipmentSlot.HAND`.
+- Ignores left-clicks; activates **only on right-click** (air or block).
+- All abilities (MELEE and RANGED) activate through right-click.
+- If item is on cooldown: sends cooldown message directly to the player and stops.
+- If available: calculates cooldown, writes cooldown onto the held ItemStack PDC, creates `AbilityContext`, and starts `AbilityEngine`.
+- No melee damage events (`EntityDamageByEntityEvent`) or projectile events are used for activation.
 
 ### `Fragment`
-- Abstract base. Immutable.
-- Fields: `id`, `displayName`, `material`, `lore`, `glint`, `executionTime`.
-- `execute(context)` is called by the engine. Implementations delegate to an `Effect`.
+- Base immutable gameplay definition.
+- Fields:
+  - `id`: registry key
+  - `displayName`: formatted display name
+  - `material`: item icon material
+  - `lore`: item description
+  - `glint`: visual enchantment glint
+  - `executionTime`: minimum ticks the effect window occupies
+  - `rarity`: enum (`COMMON`, `UNCOMMON`, `RARE`, `EPIC`, `LEGENDARY`)
+  - `cooldownModifier`: ticks contributed to ability cooldown
+  - `effect`: concrete `Effect` executed when stage runs
+- `execute(context)` delegates directly to its `effect.apply(context)`.
 
 ### `FragmentRegistry`
-- Static class-level map of `id → Fragment`.
-- Pre-registers: `invisibility`, `speed`, `explosion`.
+- Static registry mapping fragment IDs to `Fragment` instances.
+- Pre-registers `invisibility`, `speed`, and `explosion`.
 
 ### `FragmentItem`
-- Static utility: `create(fragment)` makes a physical ItemStack, `isFragmentItem(item)` checks PDC.
-- PDC keys: `item_type = "fragment"`, `fragment_id = <id>`.
-
-### `Targeting` (interface)
-- `getType()` → `TargetingType`
-- `resolve(context)` → `List<Entity>` (safe copy, never exposes internals)
-
-### `SingleTargeting`
-- Holds one pre-determined `Entity` (may be `null` for block hits).
-- `resolve()` returns `[entity]` or `[]`.
-
-### `AoeTargeting`
-- Holds a **cloned** `Location` and a `radius`.
-- `resolve()` delegates to `TargetResolver.entitiesNear()`.
-- Never mutates the caller's Location.
+- Static utility to create and identify physical Fragment items using PDC:
+  - `xpotriad:item_type = "fragment"`
+  - `xpotriad:fragment_id = <id>`
 
 ### `TargetResolver`
-- `static entitiesNear(origin, radius)` — uses `World.getNearbyEntities()`, filters dead and non-LivingEntity entries, returns an immutable list.
+- Concrete spatial query utility; not an abstract targeting layer.
+- Implements:
+  - `raycast(LivingEntity source, double range)`: view direction raycast, stopping at solid blocks, ignoring source, returning ordered `List<LivingEntity>`.
+  - `raycast(Location origin, Vector direction, double range, Entity excluded)`: general raycast query.
+  - `entitiesNear(Location center, double radius)`: spherical query returning `List<LivingEntity>`.
+  - `entitiesNear(Location center, double radius, Entity excluded)`: spherical query excluding specific entity (e.g. source).
+- Ignores dead/invalid entities and respects world boundaries.
+- Returns actual `LivingEntity` objects, never UUIDs or custom Target wrappers.
+- Does not modify world state or apply damage.
 
 ### Effects
-
-| Class | Target | Behaviour |
-|---|---|---|
-| `InvisibilityEffect` | `context.getSource()` | INVISIBILITY potion, 100t, amp 0, no particles |
-| `SpeedEffect` | `context.getSource()` | SPEED potion, 100t, amp 1, no particles |
-| `ExplosionEffect` | targeting origin | `createExplosion(loc, 4f, false, false, source)` |
-
-`ExplosionEffect` location priority:
-1. AOE origin (projectile impact)
-2. Single-target entity location
-3. Source player location (fallback)
+- Implement `Effect`: `void apply(AbilityContext context)`.
+- Effects query `TargetResolver` directly if geometry is needed and decide how to process the returned entities.
+- `InvisibilityEffect`: applies INVISIBILITY to `context.getSource()`.
+- `SpeedEffect`: applies SPEED to `context.getSource()`.
+- `ExplosionEffect`: inspects `context.getAbility().getWeaponType()` (MELEE creates explosion at source location, RANGED targets raycast position), queries `TargetResolver.entitiesNear()` for affected living entities, and creates the explosion.
 
 ---
 
@@ -165,9 +182,8 @@ src/main/java/dev/xpolion/xpotriad/
 
 | Component | What it does NOT do |
 |---|---|
-| `AbilityEngine` | Search for targets, raytrace, inspect collisions |
-| `Targeting` | Modify the engine or ability |
-| `Fragment` | Know about targeting type or weapon type |
-| `Effect` | Know about stages or timing |
-| `AbilityItem` | Store execution times |
-| `FragmentRegistry` | Store targeting configuration |
+| `AbilityEngine` | Search for targets, raytrace, manage cooldowns, inspect ItemStacks |
+| `TargetResolver` | Apply damage, knockback, effects, or modify gameplay state |
+| `AbilityContext` | Store targeting, target lists, raycasts, or cooldown states |
+| `Ability` | Store runtime cooldown timestamps or item state |
+| `AbilityListener` | Handle melee damage events for ability activation |

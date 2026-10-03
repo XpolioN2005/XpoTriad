@@ -13,26 +13,30 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
- * Manages the engraving and reading of Ability definitions on ItemStacks using PDC.
+ * Manages the engraving, reading, and cooldown state of Ability definitions on ItemStacks using PDC.
  *
- * PDC keys stored:
- *   xpotriad:ability         – presence marker
- *   xpotriad:weapon_type     – MELEE / RANGED
+ * PDC keys:
+ *   xpotriad:ability          - presence marker
+ *   xpotriad:item_type        - "ability"
+ *   xpotriad:ability_id       - unique ability identifier
+ *   xpotriad:weapon_type      - MELEE / RANGED
  *   xpotriad:pre_cast_fragment
  *   xpotriad:cast_fragment
  *   xpotriad:post_cast_fragment
- *
- * No delay keys are stored; execution times live in Fragment definitions only.
- * Lore is display-only; PDC is authoritative.
+ *   xpotriad:cooldown_until   - timestamp (epoch ms) until which this item is on cooldown
  */
 public final class AbilityItem {
 
     private static final String ABILITY_MARKER = "ability";
 
     private static NamespacedKey abilityKey;
+    private static NamespacedKey itemTypeKey;
+    private static NamespacedKey abilityIdKey;
     private static NamespacedKey weaponTypeKey;
+    private static NamespacedKey cooldownUntilKey;
 
     private static final NamespacedKey[] fragmentKeys =
             new NamespacedKey[Ability.Stage.values().length];
@@ -41,8 +45,11 @@ public final class AbilityItem {
     }
 
     public static void initialize(JavaPlugin plugin) {
-        abilityKey    = new NamespacedKey(plugin, "ability");
-        weaponTypeKey = new NamespacedKey(plugin, "weapon_type");
+        abilityKey       = new NamespacedKey(plugin, "ability");
+        itemTypeKey      = new NamespacedKey(plugin, "item_type");
+        abilityIdKey     = new NamespacedKey(plugin, "ability_id");
+        weaponTypeKey    = new NamespacedKey(plugin, "weapon_type");
+        cooldownUntilKey = new NamespacedKey(plugin, "cooldown_until");
 
         fragmentKeys[Ability.Stage.PRE_CAST.ordinal()]  =
                 new NamespacedKey(plugin, "pre_cast_fragment");
@@ -61,7 +68,6 @@ public final class AbilityItem {
         }
 
         ItemMeta meta = item.getItemMeta();
-
         if (meta == null) {
             throw new IllegalArgumentException("Item does not support item meta");
         }
@@ -69,6 +75,8 @@ public final class AbilityItem {
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
         pdc.set(abilityKey, PersistentDataType.STRING, ABILITY_MARKER);
+        pdc.set(itemTypeKey, PersistentDataType.STRING, ABILITY_MARKER);
+        pdc.set(abilityIdKey, PersistentDataType.STRING, UUID.randomUUID().toString());
         pdc.set(weaponTypeKey, PersistentDataType.STRING, ability.getWeaponType().name());
 
         for (Ability.Stage stage : Ability.Stage.values()) {
@@ -82,6 +90,9 @@ public final class AbilityItem {
             }
         }
 
+        // Clean any residual cooldown state on new engrave
+        pdc.remove(cooldownUntilKey);
+
         meta.setLore(createLore(ability));
         item.setItemMeta(meta);
     }
@@ -92,7 +103,6 @@ public final class AbilityItem {
         }
 
         ItemMeta meta = item.getItemMeta();
-
         if (meta == null) {
             return null;
         }
@@ -100,13 +110,11 @@ public final class AbilityItem {
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
         String weaponTypeName = pdc.get(weaponTypeKey, PersistentDataType.STRING);
-
         if (weaponTypeName == null) {
             return null;
         }
 
         Ability.WeaponType weaponType;
-
         try {
             weaponType = Ability.WeaponType.valueOf(weaponTypeName);
         } catch (IllegalArgumentException e) {
@@ -117,17 +125,14 @@ public final class AbilityItem {
 
         for (Ability.Stage stage : Ability.Stage.values()) {
             int index = stage.ordinal();
-
             String fragmentId = pdc.get(fragmentKeys[index], PersistentDataType.STRING);
 
             if (fragmentId != null) {
                 Fragment fragment = FragmentRegistry.get(fragmentId);
-
-                if (fragment == null) {
-                    return null;
+                if (fragment != null) {
+                    ability.setFragment(stage, fragment);
                 }
-
-                ability.setFragment(stage, fragment);
+                // Unknown fragment ID is ignored gracefully rather than throwing an exception
             }
         }
 
@@ -140,17 +145,64 @@ public final class AbilityItem {
         }
 
         ItemMeta meta = item.getItemMeta();
-
         if (meta == null) {
             return false;
         }
 
-        String marker = meta.getPersistentDataContainer().get(
-                abilityKey,
-                PersistentDataType.STRING
-        );
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        String marker = pdc.get(abilityKey, PersistentDataType.STRING);
+        if (ABILITY_MARKER.equals(marker)) {
+            return true;
+        }
 
-        return ABILITY_MARKER.equals(marker);
+        String itemType = pdc.get(itemTypeKey, PersistentDataType.STRING);
+        return ABILITY_MARKER.equals(itemType);
+    }
+
+    // -------------------------------------------------------------------------
+    // Cooldown management (Item-specific via PDC)
+    // -------------------------------------------------------------------------
+
+    public static boolean isOnCooldown(ItemStack item) {
+        return getRemainingCooldownTicks(item) > 0;
+    }
+
+    public static long getRemainingCooldownTicks(ItemStack item) {
+        if (!isAbilityItem(item)) {
+            return 0L;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return 0L;
+        }
+
+        Long until = meta.getPersistentDataContainer().get(cooldownUntilKey, PersistentDataType.LONG);
+        if (until == null) {
+            return 0L;
+        }
+
+        long remainingMillis = until - System.currentTimeMillis();
+        if (remainingMillis <= 0) {
+            return 0L;
+        }
+
+        return (remainingMillis + 49) / 50; // ceiling to nearest tick
+    }
+
+    public static void applyCooldown(ItemStack item, long cooldownTicks) {
+        if (item == null || item.getType() == Material.AIR) {
+            return;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+
+        long until = System.currentTimeMillis() + (cooldownTicks * 50L);
+        meta.getPersistentDataContainer().set(cooldownUntilKey, PersistentDataType.LONG, until);
+        item.setItemMeta(meta);
     }
 
     // -------------------------------------------------------------------------

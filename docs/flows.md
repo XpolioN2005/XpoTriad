@@ -1,217 +1,164 @@
 # Execution Flows
 
-All four scenarios share the same engine and Fragment pipeline.
-They differ only in how `AbilityContext` is created and what `Targeting` is used.
+All abilities share the same right-click activation, item-specific cooldown check, and stage sequencing engine.
 
 ---
 
-## 1. Melee — Single Target
+## 1. Right-Click Ability Activation
 
-A player swings a MELEE Ability weapon and hits an entity.
+A player right-clicks while holding an AbilityItem (regardless of whether `WeaponType` is `MELEE` or `RANGED`).
 
 ```
-Player A attacks Zombie B
+Player right-clicks with AbilityItem in Main Hand
         │
         ▼
-EntityDamageByEntityEvent
-  event.getDamager() → Player A
-  event.getEntity()  → Zombie B
-        │
-        ▼  AbilityListener.onEntityDamage()
-Read held item PDC
-  isAbilityItem? → yes
-  AbilityItem.read(item) → Ability (MELEE)
+PlayerInteractEvent
+  - Guard: event.getHand() == EquipmentSlot.HAND (prevents off-hand double trigger)
+  - Guard: action == RIGHT_CLICK_AIR || action == RIGHT_CLICK_BLOCK
+  - Guard: AbilityItem.isAbilityItem(item)
+  - Read: AbilityItem.read(item) -> Ability
+  - Cancel event to prevent vanilla interactions
         │
         ▼
-new AbilityContext(
-    source    = Player A,
-    ability   = Ability (MELEE),
-    targeting = new SingleTargeting(Zombie B)
-)
-        │
-        ▼
+Check Item Cooldown via AbilityItem PDC
+  - AbilityItem.isOnCooldown(item)
+  ├─► YES (cooling down):
+  │     - Calculate remaining seconds: remainingTicks / 20.0
+  │     - Send message only to player: "Ability is on cooldown! (X.Xs remaining)"
+  │     - Stop execution.
+  │
+  └─► NO (ready):
+        - Calculate cooldown: ability.calculateCooldown()
+            base: 20 ticks
+            + sum(fragment.cooldownModifier)
+            clamped to [0, 300] ticks
+        - Write cooldown timestamp onto held ItemStack PDC:
+            AbilityItem.applyCooldown(item, cooldownTicks)
+        - Create minimal context:
+            new AbilityContext(player, ability)
+        - Pass to engine:
+            AbilityEngine.execute(context)
+```
+
+---
+
+## 2. Stage Execution Flow (AbilityEngine)
+
+```
 AbilityEngine.execute(context)
+        │
+        ▼
+t=0     PRE_CAST Stage
+          Fragment preFragment = ability.getFragment(PRE_CAST)
+          if (preFragment != null):
+              preFragment.execute(context)  -> Effect.apply(context)
+              nextDelay = preFragment.getExecutionTime() + 5 ticks buffer
+          else:
+              nextDelay = 0 ticks (immediate)
+        │
+        ▼ (scheduled via Paper Scheduler after nextDelay)
+t=nextDelay  CAST Stage
+          Fragment castFragment = ability.getFragment(CAST)
+          if (castFragment != null):
+              castFragment.execute(context) -> Effect.apply(context)
+              nextDelay = castFragment.getExecutionTime() + 5 ticks buffer
+          else:
+              nextDelay = 0 ticks (immediate)
+        │
+        ▼ (scheduled via Paper Scheduler after nextDelay)
+t=...   POST_CAST Stage
+          Fragment postFragment = ability.getFragment(POST_CAST)
+          if (postFragment != null):
+              postFragment.execute(context) -> Effect.apply(context)
+        │
+        ▼
+Execution Finished
 ```
 
-**Stage sequence:**
+### Stage Timing Example
 
-```
-t=0     PRE_CAST
-          InvisibilityFragment.execute(context)
-            → InvisibilityEffect.apply(context)
-               → Player A gets INVISIBILITY (100t, amp 0)
+For default fragments:
+- `InvisibilityFragment`: executionTime = 10 ticks, UNCOMMON, modifier = +10 ticks
+- `SpeedFragment`: executionTime = 20 ticks, COMMON, modifier = 0 ticks
+- `ExplosionFragment`: executionTime = 0 ticks, RARE, modifier = +40 ticks
 
-        wait 10 + 5 = 15 ticks
+**Cooldown:**
+`20 (base) + 10 (invis) + 0 (speed) + 40 (expl) = 70 ticks (3.5 seconds)`.
 
-t=15    CAST
-          SpeedFragment.execute(context)
-            → SpeedEffect.apply(context)
-               → Player A gets SPEED (100t, amp 1)
-
-        wait 20 + 5 = 25 ticks
-
-t=40    POST_CAST
-          ExplosionFragment.execute(context)
-            → ExplosionEffect.apply(context)
-               targeting = SingleTargeting(Zombie B)
-               → explosion at Zombie B's location, power 4
-
-        done
-```
+**Execution Sequence:**
+- `t = 0`: PRE_CAST runs InvisibilityEffect (100t duration). Engine waits `10 + 5 = 15` ticks.
+- `t = 15`: CAST runs SpeedEffect (100t duration). Engine waits `20 + 5 = 25` ticks.
+- `t = 40`: POST_CAST runs ExplosionEffect.
+- Execution completes.
 
 ---
 
-## 2. Ranged — Projectile Hits an Entity
+## 3. Spatial Geometry Queries (TargetResolver)
 
-A player right-clicks a RANGED Ability weapon; the projectile hits a player.
+`TargetResolver` is called by Effects when they need to resolve entities within geometry.
 
-### Phase A — Launch
+### AOE Query: `entitiesNear(center, radius, excluded)`
 
-```
-Player A right-clicks RANGED Ability weapon
-        │
-        ▼  AbilityListener.onPlayerInteract()
-  event.getAction() == RIGHT_CLICK_AIR | RIGHT_CLICK_BLOCK
-  AbilityItem.read(item) → Ability (RANGED)
-  event.setCancelled(true)   ← stops vanilla behaviour
-        │
-        ▼
-UUID contextId = UUID.randomUUID()
-
-new AbilityContext(
-    source    = Player A,
-    ability   = Ability (RANGED),
-    targeting = new SingleTargeting(null)   ← placeholder
-)
-
-ActivationRegistry.register(contextId, context)
-
-Snowball projectile = player.launchProjectile(Snowball.class)
-projectile PDC: xpotriad:context_id = contextId.toString()
-```
-
-### Phase B — Hit
-
-```
-Snowball hits Player B
-        │
-        ▼  AbilityListener.onProjectileHit()
-  projectile PDC: context_id → contextId
-  ActivationRegistry.remove(contextId) → originalContext
-
-  event.getHitEntity() == Player B  (non-null)
-        │
-        ▼
-new AbilityContext(
-    source    = Player A,              ← carried from original
-    ability   = Ability (RANGED),      ← carried from original
-    targeting = new SingleTargeting(Player B)   ← finalized
-)
-        │
-        ▼
-AbilityEngine.execute(finalContext)
-```
-
-**Stage sequence:** identical timing to melee; explosion lands at Player B's location.
-
----
-
-## 3. Ranged — Projectile Hits a Block
-
-Same Phase A as above. Different Phase B.
-
-```
-Snowball hits a stone wall
-        │
-        ▼  AbilityListener.onProjectileHit()
-  event.getHitEntity() == null
-
-  impactLocation = projectile.getLocation()
-        │
-        ▼
-new AbilityContext(
-    source    = Player A,
-    ability   = Ability (RANGED),
-    targeting = new AoeTargeting(impactLocation, 5.0)
-)
-        │
-        ▼
-AbilityEngine.execute(finalContext)
-```
-
-**Stage sequence:**
-
-```
-t=0     PRE_CAST  → InvisibilityEffect → Player A invisible
-
-        wait 15 ticks
-
-t=15    CAST      → SpeedEffect        → Player A fast
-
-        wait 25 ticks
-
-t=40    POST_CAST → ExplosionEffect
-          targeting = AoeTargeting(impactLocation, 5.0)
-          → ExplosionEffect resolves AOE origin
-          → explosion at impactLocation, power 4
-```
-
----
-
-## 4. AOE Entity Resolution
-
-When `ExplosionEffect` (or any effect) needs the entities inside an AOE:
+Used by `ExplosionEffect`:
 
 ```
 ExplosionEffect.apply(context)
-    context.getTargeting() → AoeTargeting(origin, 5.0)
-    targeting.resolve(context)
-        │
-        ▼  AoeTargeting.resolve()
-    TargetResolver.entitiesNear(origin, 5.0)
-        │
-        ▼  World.getNearbyEntities(origin, 5, 5, 5)
-    filter: LivingEntity, not dead
         │
         ▼
-    List<Entity> [ Zombie, Skeleton, Player B, ... ]
+Resolve Explosion Origin:
+  - If MELEE: player.getLocation()
+  - If RANGED: raycast target location (up to 15 blocks) or forward block impact
+        │
+        ▼
+TargetResolver.entitiesNear(explosionLocation, 4.0, sourcePlayer)
+  1. Searches world.getNearbyEntities(center, 4, 4, 4)
+  2. Filters out excluded entity (source player)
+  3. Filters for valid, non-dead LivingEntity instances
+  4. Confirms spherical distance (distanceSquared <= 16.0)
+  5. Returns List<LivingEntity>
+        │
+        ▼
+Create explosion at location:
+  world.createExplosion(location, 4.0f, false, false, sourcePlayer)
 ```
 
-> **Note:** `ExplosionEffect` currently uses the AOE *origin* as the explosion point
-> rather than iterating the entity list. The resolved list would be used by effects
-> that need to apply a per-entity operation (e.g. knockback, debuff).
+### Raycast Query: `raycast(source, range)`
+
+Available for directional/beam/ranged effects:
+
+```
+TargetResolver.raycast(source, range)
+  1. Starts at source.getEyeLocation() along source view direction
+  2. Performs block raytrace (rayTraceBlocks) to stop at solid obstacles
+  3. Computes bounding box along effective ray length
+  4. Checks entity bounding box raytrace (bb.rayTrace(start, dir, range))
+  5. Excludes source, dead, or invalid entities
+  6. Orders hits by distance (closest to furthest)
+  7. Returns ordered List<LivingEntity>
+```
 
 ---
 
-## 5. Empty Stage (No Fragment)
+## 4. Item-Specific Cooldown Demonstration
 
-If a stage has no Fragment assigned, the engine skips it instantly.
+Two physical items with identical ability compositions in a player's inventory maintain completely separate cooldowns:
 
 ```
-Ability
-  PRE_CAST  = null
-  CAST      = SpeedFragment
-  POST_CAST = null
+Player Inventory:
+  Slot 1: Ability Sword A  (PDC: cooldown_until = current + 70 ticks)
+  Slot 2: Ability Sword B  (PDC: cooldown_until not set)
 
-t=0   PRE_CAST  — no fragment → advance immediately (0 delay)
-t=0   CAST      — SpeedEffect applied → wait 20 + 5 = 25 ticks
-t=25  POST_CAST — no fragment → done
-```
+1. Player right-clicks with Sword A:
+   - Sword A goes on 70 tick cooldown.
+   - Ability activates.
 
-No 5-tick buffer is added to an empty stage.
+2. Player immediately switches to Sword B and right-clicks:
+   - Sword B PDC checked: not cooling down.
+   - Sword B goes on 70 tick cooldown.
+   - Ability activates independently.
 
----
-
-## Timing Reference
-
-| Fragment | executionTime | Total wait before next stage |
-|---|---|---|
-| InvisibilityFragment | 10 ticks | 15 ticks |
-| SpeedFragment | 20 ticks | 25 ticks |
-| ExplosionFragment | 0 ticks | 5 ticks |
-| *(empty stage)* | — | 0 ticks |
-
-The 5-tick buffer is a framework constant in `AbilityEngine`:
-```java
-private static final long STAGE_BUFFER_TICKS = 5L;
+3. Player switches back to Sword A and right-clicks:
+   - Sword A PDC checked: still cooling down!
+   - Player receives message: "Ability is on cooldown! (X.Xs remaining)".
+   - Activation blocked.
 ```

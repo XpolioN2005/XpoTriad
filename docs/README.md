@@ -8,10 +8,10 @@
 
 | Document | Description |
 |---|---|
-| [architecture.md](./architecture.md) | Layer overview, package map, class responsibilities |
-| [flows.md](./flows.md) | Full execution flows: melee, ranged entity hit, ranged block hit, AOE |
+| [architecture.md](./architecture.md) | Layer overview, package map, class responsibilities, cooldown & targeting design |
+| [flows.md](./flows.md) | Full execution flows: right-click activation, cooldown checking/application, stage sequencing, spatial querying |
 | [code-guide.md](./code-guide.md) | Annotated code snippets for every key class |
-| [build.md](./build.md) | Build instructions and project layout |
+| [build.md](./build.md) | Build instructions, project layout, and PDC key reference |
 
 ---
 
@@ -20,11 +20,16 @@
 XpoTriad is an ability system for Minecraft.  
 Players carry **Ability Items** (engraved weapons) that trigger a 3-stage pipeline when activated.
 
+All abilities activate exclusively via **right-click**.
+
 ```
-Ability Item
+Right-Click Ability Item
     │
     ▼
-AbilityContext  (source + ability + targeting)
+Item Cooldown Check & Write (AbilityItem PDC)
+    │
+    ▼
+AbilityContext  (source + ability)
     │
     ▼
 AbilityEngine   (PRE_CAST → CAST → POST_CAST, timed)
@@ -33,8 +38,9 @@ AbilityEngine   (PRE_CAST → CAST → POST_CAST, timed)
 Fragment        (gameplay unit per stage)
     │
     ▼
-Effect          (actual Minecraft behaviour)
+Effect          (actual Minecraft behaviour, queries TargetResolver if needed)
 ```
 
-There are two weapon types — **MELEE** and **RANGED** — which differ only in how the `AbilityContext` is created.  
-After creation, both paths feed into the same engine.
+Weapon types (`MELEE` and `RANGED`) do not dictate the activation method; instead, they inform how individual Fragments and Effects behave during execution.
+Cooldowns are item-specific, tracked on the physical ItemStack PDC, and calculated from a base 20 ticks plus Fragment modifiers (clamped to 0..300 ticks).
+Targeting geometry is provided directly by `TargetResolver` which returns concrete `List<LivingEntity>` collections.

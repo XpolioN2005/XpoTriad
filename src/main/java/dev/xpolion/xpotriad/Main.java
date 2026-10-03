@@ -4,7 +4,6 @@ import dev.xpolion.xpotriad.ability.Ability;
 import dev.xpolion.xpotriad.ability.AbilityEngine;
 import dev.xpolion.xpotriad.ability.AbilityItem;
 import dev.xpolion.xpotriad.ability.AbilityListener;
-import dev.xpolion.xpotriad.ability.ActivationRegistry;
 import dev.xpolion.xpotriad.fragment.ExplosionFragment;
 import dev.xpolion.xpotriad.fragment.FragmentItem;
 import dev.xpolion.xpotriad.fragment.FragmentRegistry;
@@ -20,18 +19,16 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class Main extends JavaPlugin {
 
     private AbilityEngine abilityEngine;
-    private ActivationRegistry activationRegistry;
 
     @Override
     public void onEnable() {
         AbilityItem.initialize(this);
         FragmentItem.initialize(this);
 
-        abilityEngine      = new AbilityEngine(this);
-        activationRegistry = new ActivationRegistry();
+        abilityEngine = new AbilityEngine(this);
 
         getServer().getPluginManager().registerEvents(
-                new AbilityListener(abilityEngine, activationRegistry, this),
+                new AbilityListener(abilityEngine),
                 this
         );
 
@@ -58,7 +55,6 @@ public final class Main extends JavaPlugin {
             return false;
         }
 
-        // Retrieve registered fragments (execution times defined in fragment definitions)
         InvisibilityFragment invisibility =
                 (InvisibilityFragment) FragmentRegistry.get("invisibility");
         SpeedFragment speed =

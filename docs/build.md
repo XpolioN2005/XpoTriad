@@ -17,7 +17,12 @@ All required JARs must be present in `lib/`.
 
 ```
 XpoTriad/
-├── docs/                        ← this documentation
+├── docs/                        ← project documentation
+│   ├── README.md
+│   ├── architecture.md
+│   ├── flows.md
+│   ├── code-guide.md
+│   └── build.md
 ├── lib/                         ← required JARs (not committed)
 │   ├── paper-api-26.3.build.140-beta.jar
 │   ├── adventure-api-5.2.0.jar
@@ -30,9 +35,25 @@ XpoTriad/
 │       │   └── dev/xpolion/xpotriad/
 │       │       ├── Main.java
 │       │       ├── ability/
+│       │       │   ├── Ability.java
+│       │       │   ├── AbilityContext.java
+│       │       │   ├── AbilityEngine.java
+│       │       │   ├── AbilityItem.java
+│       │       │   └── AbilityListener.java
 │       │       ├── effects/
+│       │       │   ├── Effect.java
+│       │       │   ├── ExplosionEffect.java
+│       │       │   ├── InvisibilityEffect.java
+│       │       │   └── SpeedEffect.java
 │       │       ├── fragment/
+│       │       │   ├── Fragment.java
+│       │       │   ├── FragmentItem.java
+│       │       │   ├── FragmentRegistry.java
+│       │       │   ├── ExplosionFragment.java
+│       │       │   ├── InvisibilityFragment.java
+│       │       │   └── SpeedFragment.java
 │       │       └── targeting/
+│       │           └── TargetResolver.java
 │       └── resources/
 │           └── plugin.yml
 └── build/                       ← generated; not committed
@@ -92,13 +113,13 @@ commands:
 ```
 
 Gives:
-- 1× Diamond Sword engraved with a MELEE ability (Invisibility → Speed → Explosion)
+- 1× Diamond Sword engraved with an Ability (Invisibility → Speed → Explosion)
 - 1× Invisibility Fragment item
 - 1× Speed Fragment item
 - 1× Explosion Fragment item
 
-**To test MELEE:** hit any entity while holding the sword.  
-**To test RANGED:** engrave a RANGED ability via code/command, then right-click to launch a projectile.
+**To test ability activation:** right-click while holding the sword in your main hand.  
+**To test item-specific cooldown:** right-click again immediately to observe the cooldown message (`Ability is on cooldown! (X.Xs remaining)`).
 
 ---
 
@@ -109,10 +130,13 @@ Gives:
 | Key | Type | Value |
 |---|---|---|
 | `xpotriad:ability` | STRING | `"ability"` (presence marker) |
+| `xpotriad:item_type` | STRING | `"ability"` |
+| `xpotriad:ability_id` | STRING | UUID string |
 | `xpotriad:weapon_type` | STRING | `"MELEE"` or `"RANGED"` |
 | `xpotriad:pre_cast_fragment` | STRING | fragment id, e.g. `"invisibility"` |
-| `xpotriad:cast_fragment` | STRING | fragment id |
-| `xpotriad:post_cast_fragment` | STRING | fragment id |
+| `xpotriad:cast_fragment` | STRING | fragment id, e.g. `"speed"` |
+| `xpotriad:post_cast_fragment` | STRING | fragment id, e.g. `"explosion"` |
+| `xpotriad:cooldown_until` | LONG | Epoch millisecond timestamp until which item is on cooldown |
 
 ### Fragment Items
 
@@ -120,9 +144,3 @@ Gives:
 |---|---|---|
 | `xpotriad:item_type` | STRING | `"fragment"` |
 | `xpotriad:fragment_id` | STRING | fragment id, e.g. `"speed"` |
-
-### Projectiles
-
-| Key | Type | Value |
-|---|---|---|
-| `xpotriad:context_id` | STRING | UUID string of the active `AbilityContext` |

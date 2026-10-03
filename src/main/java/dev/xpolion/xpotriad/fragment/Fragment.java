@@ -1,18 +1,38 @@
 package dev.xpolion.xpotriad.fragment;
 
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.effects.Effect;
 import org.bukkit.Material;
 
 import java.util.List;
 
 /**
- * Immutable definition of a gameplay unit that executes one Effect per stage.
- * Fragment is weapon-agnostic; it does not know about targeting or weapon types.
+ * Immutable definition of a gameplay unit executed per stage.
  *
- * executionTime defines the minimum window for this fragment's effect.
- * The engine adds a 5-tick buffer on top.
+ * Fields:
+ *   id               – registry key
+ *   displayName      – coloured display name
+ *   material         – physical item material
+ *   lore             – physical item lore lines
+ *   glint            – enchantment glint override
+ *   executionTime    – minimum ticks this fragment occupies (engine adds 5-tick buffer)
+ *   rarity           – rarity tier of this fragment
+ *   cooldownModifier – ticks added to (or subtracted from) the base ability cooldown
+ *   effect           – the Effect that runs when this fragment executes
  */
 public abstract class Fragment {
+
+    /**
+     * Rarity tier of a Fragment.
+     * Values are ordered from lowest to highest tier.
+     */
+    public enum Rarity {
+        COMMON,
+        UNCOMMON,
+        RARE,
+        EPIC,
+        LEGENDARY
+    }
 
     private final String id;
     private final String displayName;
@@ -20,33 +40,13 @@ public abstract class Fragment {
     private final List<String> lore;
     private final boolean glint;
     private final long executionTime;
+    private final Rarity rarity;
+    private final long cooldownModifier;
+    private final Effect effect;
 
-    protected Fragment(
-            String id,
-            String displayName,
-            Material material
-    ) {
-        this(id, displayName, material, List.of(), false, 0L);
-    }
-
-    protected Fragment(
-            String id,
-            String displayName,
-            Material material,
-            List<String> lore
-    ) {
-        this(id, displayName, material, lore, false, 0L);
-    }
-
-    protected Fragment(
-            String id,
-            String displayName,
-            Material material,
-            List<String> lore,
-            boolean glint
-    ) {
-        this(id, displayName, material, lore, glint, 0L);
-    }
+    // ------------------------------------------------------------------
+    // Convenience constructors – all chain to the full constructor
+    // ------------------------------------------------------------------
 
     protected Fragment(
             String id,
@@ -54,18 +54,28 @@ public abstract class Fragment {
             Material material,
             List<String> lore,
             boolean glint,
-            long executionTime
+            long executionTime,
+            Rarity rarity,
+            long cooldownModifier,
+            Effect effect
     ) {
         if (executionTime < 0) {
             throw new IllegalArgumentException("executionTime cannot be negative");
         }
-        this.id            = id;
-        this.displayName   = displayName;
-        this.material      = material;
-        this.lore          = List.copyOf(lore);
-        this.glint         = glint;
-        this.executionTime = executionTime;
+        this.id               = id;
+        this.displayName      = displayName;
+        this.material         = material;
+        this.lore             = List.copyOf(lore);
+        this.glint            = glint;
+        this.executionTime    = executionTime;
+        this.rarity           = rarity;
+        this.cooldownModifier = cooldownModifier;
+        this.effect           = effect;
     }
+
+    // ------------------------------------------------------------------
+    // Accessors
+    // ------------------------------------------------------------------
 
     public final String getId() {
         return id;
@@ -88,12 +98,34 @@ public abstract class Fragment {
     }
 
     /**
-     * The minimum execution window for this fragment's effect, in ticks.
-     * The engine waits executionTime + 5 ticks before advancing to the next stage.
+     * Minimum ticks this fragment's effect occupies.
+     * The engine waits {@code executionTime + 5} ticks before advancing to the next stage.
      */
     public final long getExecutionTime() {
         return executionTime;
     }
 
-    public abstract void execute(AbilityContext context);
+    public final Rarity getRarity() {
+        return rarity;
+    }
+
+    /**
+     * Ticks to add (positive) or subtract (negative) from the base ability cooldown.
+     * The listener clamps the final value to [0, 300].
+     */
+    public final long getCooldownModifier() {
+        return cooldownModifier;
+    }
+
+    public final Effect getEffect() {
+        return effect;
+    }
+
+    // ------------------------------------------------------------------
+    // Execution
+    // ------------------------------------------------------------------
+
+    public final void execute(AbilityContext context) {
+        effect.apply(context);
+    }
 }
