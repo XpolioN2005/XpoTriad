@@ -16,15 +16,15 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public final class ChestGui implements Listener {
 
@@ -32,7 +32,8 @@ public final class ChestGui implements Listener {
     public static final int ROWS = 5;
     public static final int SIZE = COLUMNS * ROWS;
 
-    private static final Material DEFAULT_DECORATION = Material.BLACK_STAINED_GLASS_PANE;
+    private static final Material DEFAULT_DECORATION =
+            Material.BLACK_STAINED_GLASS_PANE;
 
     private final Plugin plugin;
     private final Function<ItemStack, Object> itemResolver;
@@ -42,7 +43,8 @@ public final class ChestGui implements Listener {
             Function<ItemStack, Object> itemResolver
     ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
-        this.itemResolver = Objects.requireNonNull(itemResolver, "itemResolver");
+        this.itemResolver =
+                Objects.requireNonNull(itemResolver, "itemResolver");
 
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -74,12 +76,12 @@ public final class ChestGui implements Listener {
         return new ItemStack(DEFAULT_DECORATION);
     }
 
-    private static ItemStack copy(ItemStack item) {
-        return item == null ? null : item.clone();
-    }
-
     private boolean accepts(Input input, ItemStack item) {
         if (item == null || item.getType().isAir()) {
+            return false;
+        }
+
+        if (input.filter() != null && !input.filter().test(item)) {
             return false;
         }
 
@@ -95,7 +97,8 @@ public final class ChestGui implements Listener {
             return false;
         }
 
-        return resolved != null && input.acceptedClass().isInstance(resolved);
+        return resolved != null
+                && input.acceptedClass().isInstance(resolved);
     }
 
     private void returnItem(Player player, ItemStack item) {
@@ -103,7 +106,8 @@ public final class ChestGui implements Listener {
             return;
         }
 
-        Map<Integer, ItemStack> overflow = player.getInventory().addItem(item);
+        Map<Integer, ItemStack> overflow =
+                player.getInventory().addItem(item);
 
         for (ItemStack remaining : overflow.values()) {
             player.getWorld().dropItemNaturally(
@@ -135,8 +139,10 @@ public final class ChestGui implements Listener {
         private final Inventory inventory;
 
         private final Map<String, Input> inputs = new LinkedHashMap<>();
-        private final Map<Integer, Input> inputsBySlot = new LinkedHashMap<>();
-        private final Map<Integer, Button> buttons = new LinkedHashMap<>();
+        private final Map<Integer, Input> inputsBySlot =
+                new LinkedHashMap<>();
+        private final Map<Integer, Button> buttons =
+                new LinkedHashMap<>();
 
         private State state = State.OPEN;
 
@@ -161,7 +167,7 @@ public final class ChestGui implements Listener {
         }
 
         public Session input(String id, int x, int y) {
-            return input(id, x, y, null);
+            return input(id, x, y, (Class<?>) null);
         }
 
         public Session input(
@@ -169,6 +175,60 @@ public final class ChestGui implements Listener {
                 int x,
                 int y,
                 Class<?> acceptedClass
+        ) {
+            return input(id, x, y, acceptedClass, null);
+        }
+
+        public Session input(
+                String id,
+                int x,
+                int y,
+                Predicate<ItemStack> filter
+        ) {
+            return input(id, x, y, null, filter);
+        }
+
+        public Session input(
+                String id,
+                int x,
+                int y,
+                Predicate<ItemStack> filter,
+                BiConsumer<Session, ItemStack> onChange
+        ) {
+            return input(
+                    id,
+                    x,
+                    y,
+                    null,
+                    filter,
+                    onChange
+            );
+        }
+
+        public Session input(
+                String id,
+                int x,
+                int y,
+                Class<?> acceptedClass,
+                Predicate<ItemStack> filter
+        ) {
+            return input(
+                    id,
+                    x,
+                    y,
+                    acceptedClass,
+                    filter,
+                    null
+            );
+        }
+
+        public Session input(
+                String id,
+                int x,
+                int y,
+                Class<?> acceptedClass,
+                Predicate<ItemStack> filter,
+                BiConsumer<Session, ItemStack> onChange
         ) {
             Objects.requireNonNull(id, "id");
 
@@ -185,7 +245,9 @@ public final class ChestGui implements Listener {
             Input input = new Input(
                     id,
                     slot,
-                    acceptedClass
+                    acceptedClass,
+                    filter,
+                    onChange
             );
 
             inputs.put(id, input);
@@ -236,7 +298,8 @@ public final class ChestGui implements Listener {
                         String commandToRun = command;
 
                         if (commandToRun.startsWith("/")) {
-                            commandToRun = commandToRun.substring(1);
+                            commandToRun =
+                                    commandToRun.substring(1);
                         }
 
                         return player.performCommand(commandToRun);
@@ -305,6 +368,40 @@ public final class ChestGui implements Listener {
             return inputs.get(id);
         }
 
+        public ItemStack getItem(String id) {
+            Input input = inputs.get(id);
+
+            return input != null
+                    ? inventory.getItem(input.slot())
+                    : null;
+        }
+
+        public void setItem(String id, ItemStack item) {
+            Input input = inputs.get(id);
+
+            if (input == null) {
+                throw new IllegalArgumentException(
+                        "Unknown input: " + id
+                );
+            }
+
+            if (item != null && !item.getType().isAir()
+                    && !accepts(input, item)) {
+                throw new IllegalArgumentException(
+                        "Item is not accepted by input: " + id
+                );
+            }
+
+            inventory.setItem(
+                    input.slot(),
+                    item == null ? null : item.clone()
+            );
+        }
+
+        public void returnItem(ItemStack item) {
+            ChestGui.this.returnItem(player, item);
+        }
+
         public boolean hasInput(String id) {
             return inputs.containsKey(id);
         }
@@ -345,7 +442,8 @@ public final class ChestGui implements Listener {
 
             returnInputs();
 
-            if (player.getOpenInventory().getTopInventory() == inventory) {
+            if (player.getOpenInventory().getTopInventory()
+                    == inventory) {
                 player.closeInventory();
             }
         }
@@ -372,19 +470,12 @@ public final class ChestGui implements Listener {
                 return;
             }
 
-            /*
-             * Clear the inputs BEFORE closing.
-             *
-             * This is important because InventoryCloseEvent normally
-             * returns remaining input items. A successful action has
-             * already consumed them, so there must be nothing left
-             * for the close handler to return.
-             */
             clearInputs();
 
             state = State.CLOSED;
 
-            if (player.getOpenInventory().getTopInventory() == inventory) {
+            if (player.getOpenInventory().getTopInventory()
+                    == inventory) {
                 player.closeInventory();
             }
         }
@@ -397,43 +488,79 @@ public final class ChestGui implements Listener {
 
         private void returnInputs() {
             for (Input input : inputs.values()) {
-                ItemStack item = inventory.getItem(input.slot());
+                ItemStack item =
+                        inventory.getItem(input.slot());
 
                 if (item == null || item.getType().isAir()) {
                     continue;
                 }
 
                 inventory.setItem(input.slot(), null);
-                returnItem(player, item);
+                ChestGui.this.returnItem(player, item);
             }
         }
 
-        private boolean isTopInventory(InventoryClickEvent event) {
+        private void notifyInputChanged(Input input) {
+            if (input.onChange() == null) {
+                return;
+            }
+
+            ItemStack item = inventory.getItem(input.slot());
+
+            input.onChange().accept(
+                    this,
+                    item == null ? null : item.clone()
+            );
+        }
+
+        private void notifyInputChangedNextTick(Input input) {
+            if (input.onChange() == null) {
+                return;
+            }
+
+            Bukkit.getScheduler().runTask(
+                    plugin,
+                    () -> {
+                        if (state != State.OPEN) {
+                            return;
+                        }
+
+                        notifyInputChanged(input);
+                    }
+            );
+        }
+
+        private void notifyAllChangedInputsNextTick(
+                Iterable<Integer> slots
+        ) {
+            for (int rawSlot : slots) {
+                if (rawSlot < 0
+                        || rawSlot >= inventory.getSize()) {
+                    continue;
+                }
+
+                Input input = inputsBySlot.get(rawSlot);
+
+                if (input != null) {
+                    notifyInputChangedNextTick(input);
+                }
+            }
+        }
+
+        private boolean isTopInventory(
+                InventoryClickEvent event
+        ) {
             return event.getRawSlot() >= 0
                     && event.getRawSlot() < inventory.getSize();
-        }
-
-        private boolean isOurInventory(Inventory inventory) {
-            return inventory == this.inventory;
-        }
-
-        private boolean isProtectedSlot(int slot) {
-            return !inputsBySlot.containsKey(slot);
         }
 
         private boolean isInputSlot(int slot) {
             return inputsBySlot.containsKey(slot);
         }
 
-        private boolean isValidInputClick(InventoryClickEvent event) {
-            if (!isTopInventory(event)) {
-                return false;
-            }
-
-            return isInputSlot(event.getRawSlot());
-        }
-
-        private void handleBottomShiftClick(InventoryClickEvent event) {
+        private void handleBottomShiftClick(
+                InventoryClickEvent event
+        ) {
             ItemStack source = event.getCurrentItem();
 
             if (source == null || source.getType().isAir()) {
@@ -455,7 +582,9 @@ public final class ChestGui implements Listener {
             );
         }
 
-        private boolean insertIntoInputs(ItemStack remaining) {
+        private boolean insertIntoInputs(
+                ItemStack remaining
+        ) {
             boolean moved = false;
 
             /*
@@ -470,9 +599,11 @@ public final class ChestGui implements Listener {
                     continue;
                 }
 
-                ItemStack current = inventory.getItem(input.slot());
+                ItemStack current =
+                        inventory.getItem(input.slot());
 
-                if (current == null || current.getType().isAir()) {
+                if (current == null
+                        || current.getType().isAir()) {
                     continue;
                 }
 
@@ -485,7 +616,8 @@ public final class ChestGui implements Listener {
                         inventory.getMaxStackSize()
                 );
 
-                int available = max - current.getAmount();
+                int available =
+                        max - current.getAmount();
 
                 if (available <= 0) {
                     continue;
@@ -496,10 +628,20 @@ public final class ChestGui implements Listener {
                         remaining.getAmount()
                 );
 
-                current.setAmount(current.getAmount() + amount);
-                remaining.setAmount(remaining.getAmount() - amount);
+                current.setAmount(
+                        current.getAmount() + amount
+                );
 
-                inventory.setItem(input.slot(), current);
+                remaining.setAmount(
+                        remaining.getAmount() - amount
+                );
+
+                inventory.setItem(
+                        input.slot(),
+                        current
+                );
+
+                notifyInputChanged(input);
 
                 moved = true;
             }
@@ -516,9 +658,11 @@ public final class ChestGui implements Listener {
                     continue;
                 }
 
-                ItemStack current = inventory.getItem(input.slot());
+                ItemStack current =
+                        inventory.getItem(input.slot());
 
-                if (current != null && !current.getType().isAir()) {
+                if (current != null
+                        && !current.getType().isAir()) {
                     continue;
                 }
 
@@ -534,7 +678,12 @@ public final class ChestGui implements Listener {
                         remaining.getAmount() - amount
                 );
 
-                inventory.setItem(input.slot(), inserted);
+                inventory.setItem(
+                        input.slot(),
+                        inserted
+                );
+
+                notifyInputChanged(input);
 
                 moved = true;
             }
@@ -542,7 +691,9 @@ public final class ChestGui implements Listener {
             return moved;
         }
 
-        private boolean isAllowedDrag(InventoryDragEvent event) {
+        private boolean isAllowedDrag(
+                InventoryDragEvent event
+        ) {
             ItemStack cursor = event.getOldCursor();
 
             if (cursor == null || cursor.getType().isAir()) {
@@ -559,7 +710,8 @@ public final class ChestGui implements Listener {
                         return false;
                     }
 
-                    Input input = inputsBySlot.get(rawSlot);
+                    Input input =
+                            inputsBySlot.get(rawSlot);
 
                     if (!accepts(input, cursor)) {
                         return false;
@@ -567,10 +719,6 @@ public final class ChestGui implements Listener {
                 }
             }
 
-            /*
-             * Dragging entirely inside the player's inventory is normal
-             * Minecraft behavior and does not need intervention.
-             */
             return !touchedTop || true;
         }
     }
@@ -578,8 +726,38 @@ public final class ChestGui implements Listener {
     public record Input(
             String id,
             int slot,
-            Class<?> acceptedClass
+            Class<?> acceptedClass,
+            Predicate<ItemStack> filter,
+            BiConsumer<Session, ItemStack> onChange
     ) {
+        public Input(
+                String id,
+                int slot,
+                Class<?> acceptedClass
+        ) {
+            this(
+                    id,
+                    slot,
+                    acceptedClass,
+                    null,
+                    null
+            );
+        }
+
+        public Input(
+                String id,
+                int slot,
+                Class<?> acceptedClass,
+                Predicate<ItemStack> filter
+        ) {
+            this(
+                    id,
+                    slot,
+                    acceptedClass,
+                    filter,
+                    null
+            );
+        }
     }
 
     public record Button(
@@ -589,9 +767,12 @@ public final class ChestGui implements Listener {
     ) {
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(
+            priority = EventPriority.HIGHEST,
+            ignoreCancelled = true
+    )
     private void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) {
+        if (!(event.getWhoClicked() instanceof Player)) {
             return;
         }
 
@@ -607,8 +788,7 @@ public final class ChestGui implements Listener {
         }
 
         /*
-         * Number-key hotbar swaps can bypass ordinary slot handling.
-         * Protected GUI slots must never participate in them.
+         * Number-key hotbar swaps.
          */
         if (event.getClick() == ClickType.NUMBER_KEY) {
             if (session.isTopInventory(event)
@@ -628,8 +808,7 @@ public final class ChestGui implements Listener {
         }
 
         /*
-         * Double-click collection can attempt to collect matching
-         * items from the entire open inventory.
+         * Double-click collection.
          */
         if (event.getClick() == ClickType.DOUBLE_CLICK) {
             event.setCancelled(true);
@@ -637,9 +816,7 @@ public final class ChestGui implements Listener {
         }
 
         /*
-         * Dropping items while the GUI is open is blocked from the
-         * GUI interaction path. Input items can only leave through
-         * normal pickup or closing the GUI.
+         * Item dropping.
          */
         if (event.getClick() == ClickType.DROP
                 || event.getClick() == ClickType.CONTROL_DROP) {
@@ -648,8 +825,7 @@ public final class ChestGui implements Listener {
         }
 
         /*
-         * Creative mode has inventory manipulation actions that do
-         * not correspond cleanly to normal survival clicks.
+         * Creative inventory manipulation.
          */
         if (event.getClick() == ClickType.CREATIVE) {
             event.setCancelled(true);
@@ -666,11 +842,6 @@ public final class ChestGui implements Listener {
 
             if (button != null) {
                 event.setCancelled(true);
-
-                if (event.getAction() == InventoryAction.NOTHING) {
-                    return;
-                }
-
                 session.processButton(button);
                 return;
             }
@@ -679,49 +850,61 @@ public final class ChestGui implements Listener {
              * Input.
              */
             if (session.isInputSlot(slot)) {
-                Input input = session.inputsBySlot.get(slot);
+                Input input =
+                        session.inputsBySlot.get(slot);
 
-                /*
-                 * Normal left/right interaction with an input is
-                 * delegated to vanilla Minecraft.
-                 *
-                 * The accepted-class check is still enforced by
-                 * cancelling attempts to place invalid items.
-                 */
                 if (event.getCursor() != null
                         && !event.getCursor().getType().isAir()
-                        && !accepts(input, event.getCursor())
-                        && event.getAction() != InventoryAction.PICKUP_ALL
-                        && event.getAction() != InventoryAction.PICKUP_HALF
-                        && event.getAction() != InventoryAction.PICKUP_ONE
-                        && event.getAction() != InventoryAction.PICKUP_SOME) {
+                        && !accepts(
+                                input,
+                                event.getCursor()
+                        )
+                        && event.getAction()
+                        != InventoryAction.PICKUP_ALL
+                        && event.getAction()
+                        != InventoryAction.PICKUP_HALF
+                        && event.getAction()
+                        != InventoryAction.PICKUP_ONE
+                        && event.getAction()
+                        != InventoryAction.PICKUP_SOME) {
 
                     event.setCancelled(true);
+                    return;
                 }
 
+                /*
+                 * Vanilla will modify the inventory after this
+                 * event. Check the changed input on the next tick.
+                 */
+                session.notifyInputChangedNextTick(input);
                 return;
             }
 
             /*
-             * Everything else in the top inventory is decoration/info.
+             * Everything else in the top inventory is protected.
              */
             event.setCancelled(true);
             return;
         }
 
         /*
-         * Shift-clicking from the player's inventory into the GUI.
+         * Shift-clicking from the player's inventory.
          */
         if (event.isShiftClick()) {
             event.setCancelled(true);
 
-            if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+            if (event.getAction()
+                    == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+
                 session.handleBottomShiftClick(event);
             }
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(
+            priority = EventPriority.HIGHEST,
+            ignoreCancelled = true
+    )
     private void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) {
             return;
@@ -738,11 +921,6 @@ public final class ChestGui implements Listener {
             return;
         }
 
-        /*
-         * A drag touching the GUI is allowed only when every affected
-         * GUI slot is an input and the dragged item is valid for that
-         * input.
-         */
         if (!session.isAllowedDrag(event)) {
             for (int rawSlot : event.getRawSlots()) {
                 if (rawSlot < session.inventory.getSize()) {
@@ -751,10 +929,19 @@ public final class ChestGui implements Listener {
                 }
             }
         }
+
+        /*
+         * Vanilla applies the drag after this event.
+         */
+        session.notifyAllChangedInputsNextTick(
+                event.getRawSlots()
+        );
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
-    private void onInventoryClose(InventoryCloseEvent event) {
+    private void onInventoryClose(
+            InventoryCloseEvent event
+    ) {
         Inventory top = event.getInventory();
 
         if (!(top.getHolder() instanceof Session session)) {
@@ -773,7 +960,8 @@ public final class ChestGui implements Listener {
     private void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
 
-        Inventory top = player.getOpenInventory().getTopInventory();
+        Inventory top =
+                player.getOpenInventory().getTopInventory();
 
         if (!(top.getHolder() instanceof Session session)) {
             return;

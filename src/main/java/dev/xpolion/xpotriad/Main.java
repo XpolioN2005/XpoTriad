@@ -9,6 +9,7 @@ import dev.xpolion.xpotriad.fragment.FragmentItem;
 import dev.xpolion.xpotriad.fragment.FragmentRegistry;
 import dev.xpolion.xpotriad.fragment.InvisibilityFragment;
 import dev.xpolion.xpotriad.fragment.SpeedFragment;
+import dev.xpolion.xpotriad.visual.EtchLoom;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -19,6 +20,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class Main extends JavaPlugin {
 
     private AbilityEngine abilityEngine;
+    private EtchLoom etchLoom;
 
     @Override
     public void onEnable() {
@@ -26,6 +28,7 @@ public final class Main extends JavaPlugin {
         FragmentItem.initialize(this);
 
         abilityEngine = new AbilityEngine(this);
+        etchLoom = new EtchLoom(this);
 
         getServer().getPluginManager().registerEvents(
                 new AbilityListener(abilityEngine),
@@ -48,6 +51,11 @@ public final class Main extends JavaPlugin {
             String[] args
     ) {
         if (!(sender instanceof Player player)) {
+            return true;
+        }
+
+        if (command.getName().equalsIgnoreCase("xpbind")) {
+            etchLoom.open(player);
             return true;
         }
 

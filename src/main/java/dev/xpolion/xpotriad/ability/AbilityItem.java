@@ -16,7 +16,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Manages the engraving, reading, and cooldown state of Ability definitions on ItemStacks using PDC.
+ * Manages the engraving, reading, and cooldown state of Ability definitions
+ * on ItemStacks using PDC.
  *
  * PDC keys:
  *   xpotriad:ability          - presence marker
@@ -51,10 +52,12 @@ public final class AbilityItem {
         weaponTypeKey    = new NamespacedKey(plugin, "weapon_type");
         cooldownUntilKey = new NamespacedKey(plugin, "cooldown_until");
 
-        fragmentKeys[Ability.Stage.PRE_CAST.ordinal()]  =
+        fragmentKeys[Ability.Stage.PRE_CAST.ordinal()] =
                 new NamespacedKey(plugin, "pre_cast_fragment");
-        fragmentKeys[Ability.Stage.CAST.ordinal()]      =
+
+        fragmentKeys[Ability.Stage.CAST.ordinal()] =
                 new NamespacedKey(plugin, "cast_fragment");
+
         fragmentKeys[Ability.Stage.POST_CAST.ordinal()] =
                 new NamespacedKey(plugin, "post_cast_fragment");
     }
@@ -63,37 +66,84 @@ public final class AbilityItem {
         if (item == null || item.getType() == Material.AIR) {
             throw new IllegalArgumentException("Cannot engrave an empty item");
         }
+
         if (ability == null) {
             throw new IllegalArgumentException("Ability cannot be null");
         }
 
         ItemMeta meta = item.getItemMeta();
+
         if (meta == null) {
-            throw new IllegalArgumentException("Item does not support item meta");
+            throw new IllegalArgumentException(
+                    "Item does not support item meta"
+            );
         }
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
-        pdc.set(abilityKey, PersistentDataType.STRING, ABILITY_MARKER);
-        pdc.set(itemTypeKey, PersistentDataType.STRING, ABILITY_MARKER);
-        pdc.set(abilityIdKey, PersistentDataType.STRING, UUID.randomUUID().toString());
-        pdc.set(weaponTypeKey, PersistentDataType.STRING, ability.getWeaponType().name());
+        // -----------------------------------------------------------------
+        // Ability identity
+        // -----------------------------------------------------------------
+
+        pdc.set(
+                abilityKey,
+                PersistentDataType.STRING,
+                ABILITY_MARKER
+        );
+
+        pdc.set(
+                itemTypeKey,
+                PersistentDataType.STRING,
+                ABILITY_MARKER
+        );
+
+        pdc.set(
+                abilityIdKey,
+                PersistentDataType.STRING,
+                UUID.randomUUID().toString()
+        );
+
+        pdc.set(
+                weaponTypeKey,
+                PersistentDataType.STRING,
+                ability.getWeaponType().name()
+        );
+
+        // -----------------------------------------------------------------
+        // Fragments
+        // -----------------------------------------------------------------
 
         for (Ability.Stage stage : Ability.Stage.values()) {
             int index = stage.ordinal();
             Fragment fragment = ability.getFragment(stage);
 
             if (fragment != null) {
-                pdc.set(fragmentKeys[index], PersistentDataType.STRING, fragment.getId());
+                pdc.set(
+                        fragmentKeys[index],
+                        PersistentDataType.STRING,
+                        fragment.getId()
+                );
             } else {
+                // Remove an old fragment when the new ability leaves
+                // this stage empty.
                 pdc.remove(fragmentKeys[index]);
             }
         }
 
-        // Clean any residual cooldown state on new engrave
+        // A newly engraved ability starts without an active cooldown.
         pdc.remove(cooldownUntilKey);
 
+        // -----------------------------------------------------------------
+        // Ability lore
+        // -----------------------------------------------------------------
+        //
+        // This intentionally replaces the item's lore completely.
+        // The item itself still retains all other ItemMeta:
+        // name, enchantments, attributes, damage/durability, etc.
+        //
         meta.setLore(createLore(ability));
+        meta.setEnchantmentGlintOverride(true);
+
         item.setItemMeta(meta);
     }
 
@@ -103,18 +153,22 @@ public final class AbilityItem {
         }
 
         ItemMeta meta = item.getItemMeta();
+
         if (meta == null) {
             return null;
         }
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
-        String weaponTypeName = pdc.get(weaponTypeKey, PersistentDataType.STRING);
+        String weaponTypeName =
+                pdc.get(weaponTypeKey, PersistentDataType.STRING);
+
         if (weaponTypeName == null) {
             return null;
         }
 
         Ability.WeaponType weaponType;
+
         try {
             weaponType = Ability.WeaponType.valueOf(weaponTypeName);
         } catch (IllegalArgumentException e) {
@@ -125,14 +179,18 @@ public final class AbilityItem {
 
         for (Ability.Stage stage : Ability.Stage.values()) {
             int index = stage.ordinal();
-            String fragmentId = pdc.get(fragmentKeys[index], PersistentDataType.STRING);
+
+            String fragmentId =
+                    pdc.get(fragmentKeys[index], PersistentDataType.STRING);
 
             if (fragmentId != null) {
                 Fragment fragment = FragmentRegistry.get(fragmentId);
+
                 if (fragment != null) {
                     ability.setFragment(stage, fragment);
                 }
-                // Unknown fragment ID is ignored gracefully rather than throwing an exception
+
+                // Unknown fragment IDs are ignored gracefully.
             }
         }
 
@@ -145,22 +203,28 @@ public final class AbilityItem {
         }
 
         ItemMeta meta = item.getItemMeta();
+
         if (meta == null) {
             return false;
         }
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
-        String marker = pdc.get(abilityKey, PersistentDataType.STRING);
+
+        String marker =
+                pdc.get(abilityKey, PersistentDataType.STRING);
+
         if (ABILITY_MARKER.equals(marker)) {
             return true;
         }
 
-        String itemType = pdc.get(itemTypeKey, PersistentDataType.STRING);
+        String itemType =
+                pdc.get(itemTypeKey, PersistentDataType.STRING);
+
         return ABILITY_MARKER.equals(itemType);
     }
 
     // -------------------------------------------------------------------------
-    // Cooldown management (Item-specific via PDC)
+    // Cooldown management
     // -------------------------------------------------------------------------
 
     public static boolean isOnCooldown(ItemStack item) {
@@ -173,21 +237,27 @@ public final class AbilityItem {
         }
 
         ItemMeta meta = item.getItemMeta();
+
         if (meta == null) {
             return 0L;
         }
 
-        Long until = meta.getPersistentDataContainer().get(cooldownUntilKey, PersistentDataType.LONG);
+        Long until = meta.getPersistentDataContainer().get(
+                cooldownUntilKey,
+                PersistentDataType.LONG
+        );
+
         if (until == null) {
             return 0L;
         }
 
         long remainingMillis = until - System.currentTimeMillis();
+
         if (remainingMillis <= 0) {
             return 0L;
         }
 
-        return (remainingMillis + 49) / 50; // ceiling to nearest tick
+        return (remainingMillis + 49) / 50;
     }
 
     public static void applyCooldown(ItemStack item, long cooldownTicks) {
@@ -196,28 +266,59 @@ public final class AbilityItem {
         }
 
         ItemMeta meta = item.getItemMeta();
+
         if (meta == null) {
             return;
         }
 
-        long until = System.currentTimeMillis() + (cooldownTicks * 50L);
-        meta.getPersistentDataContainer().set(cooldownUntilKey, PersistentDataType.LONG, until);
+        long until =
+                System.currentTimeMillis() + (cooldownTicks * 50L);
+
+        meta.getPersistentDataContainer().set(
+                cooldownUntilKey,
+                PersistentDataType.LONG,
+                until
+        );
+
         item.setItemMeta(meta);
     }
 
     // -------------------------------------------------------------------------
-    // Lore helpers (display-only)
+    // Lore
     // -------------------------------------------------------------------------
 
     private static List<String> createLore(Ability ability) {
         List<String> lore = new ArrayList<>();
 
         lore.add(ChatColor.DARK_PURPLE + "Ability");
-        lore.add("");
 
-        addStageLore(lore, "Pre-Cast",  ability, Ability.Stage.PRE_CAST);
-        addStageLore(lore, "Cast",      ability, Ability.Stage.CAST);
-        addStageLore(lore, "Post-Cast", ability, Ability.Stage.POST_CAST);
+        addStageLore(
+                lore,
+                "Pre-Cast",
+                ability.getFragment(Ability.Stage.PRE_CAST)
+        );
+
+        addStageLore(
+                lore,
+                "Cast",
+                ability.getFragment(Ability.Stage.CAST)
+        );
+
+        addStageLore(
+                lore,
+                "Post-Cast",
+                ability.getFragment(Ability.Stage.POST_CAST)
+        );
+
+        long cooldownTicks = ability.calculateCooldown();
+        double cooldownSeconds = cooldownTicks / 20.0;
+
+        lore.add(
+                ChatColor.GRAY
+                        + "Cooldown: "
+                        + ChatColor.WHITE
+                        + formatCooldown(cooldownSeconds)
+        );
 
         return lore;
     }
@@ -225,23 +326,63 @@ public final class AbilityItem {
     private static void addStageLore(
             List<String> lore,
             String displayName,
-            Ability ability,
-            Ability.Stage stage
+            Fragment fragment
     ) {
-        Fragment fragment = ability.getFragment(stage);
-
-        lore.add(ChatColor.LIGHT_PURPLE + displayName);
+        String fragmentName;
 
         if (fragment == null) {
-            lore.add(ChatColor.GRAY + "  Empty");
+            fragmentName = ChatColor.GRAY + "Empty";
         } else {
-            lore.add(
-                ChatColor.WHITE
-                    + "  "
-                    + ChatColor.stripColor(fragment.getDisplayName())
-            );
+            fragmentName =
+                    ChatColor.WHITE
+                            + ChatColor.stripColor(fragment.getDisplayName());
         }
 
-        lore.add("");
+        lore.add(
+                ChatColor.LIGHT_PURPLE
+                        + displayName
+                        + ": "
+                        + fragmentName
+        );
+    }
+
+    private static String formatCooldown(double seconds) {
+        if (seconds == Math.floor(seconds)) {
+            return String.format("%.0fs", seconds);
+        }
+
+        return String.format("%.2fs", seconds);
+    }
+
+    public static ItemStack deconstruct(ItemStack item) {
+        if (!isAbilityItem(item)) {
+            return null;
+        }
+
+        ItemStack result = item.clone();
+        ItemMeta meta = result.getItemMeta();
+
+        if (meta == null) {
+            return null;
+        }
+
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+
+        pdc.remove(abilityKey);
+        pdc.remove(itemTypeKey);
+        pdc.remove(abilityIdKey);
+        pdc.remove(weaponTypeKey);
+        pdc.remove(cooldownUntilKey);
+
+        for (NamespacedKey fragmentKey : fragmentKeys) {
+            pdc.remove(fragmentKey);
+        }
+
+        meta.setLore(null);
+        meta.setEnchantmentGlintOverride(false);
+
+        result.setItemMeta(meta);
+
+        return result;
     }
 }

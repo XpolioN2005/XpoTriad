@@ -6,3 +6,5 @@ api-version: "26.3"
 commands:
   xptest:
     description: Test XpoTriad ability system
+  xpbind:
+    description: Open the EtchLoom GUI
