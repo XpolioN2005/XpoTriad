@@ -76,8 +76,8 @@ public final class EtchLoom {
                 Component.text("EtchLoom")
         );
 
-        // Info / description row (row 2)
-        session.info(2, 2, createInfoPane(
+        // Info / description row (row 3)
+        session.info(2, 3, createInfoPane(
                 Material.CYAN_STAINED_GLASS_PANE,
                 ChatColor.AQUA + "Target",
                 List.of(
@@ -87,7 +87,7 @@ public final class EtchLoom {
                 )
         ));
 
-        session.info(4, 2, createInfoPane(
+        session.info(4, 3, createInfoPane(
                 Material.PURPLE_STAINED_GLASS_PANE,
                 ChatColor.LIGHT_PURPLE + "Pre-Cast Fragment",
                 List.of(
@@ -96,7 +96,7 @@ public final class EtchLoom {
                 )
         ));
 
-        session.info(5, 2, createInfoPane(
+        session.info(5, 3, createInfoPane(
                 Material.MAGENTA_STAINED_GLASS_PANE,
                 ChatColor.LIGHT_PURPLE + "Cast Fragment",
                 List.of(
@@ -105,7 +105,7 @@ public final class EtchLoom {
                 )
         ));
 
-        session.info(6, 2, createInfoPane(
+        session.info(6, 3, createInfoPane(
                 Material.RED_STAINED_GLASS_PANE,
                 ChatColor.LIGHT_PURPLE + "Post-Cast Fragment",
                 List.of(
@@ -114,11 +114,11 @@ public final class EtchLoom {
                 )
         ));
 
-        // Input row (row 3)
+        // Input row (row 4)
         session.input(
                 "target",
                 2,
-                3,
+                4,
                 item -> item != null
                         && (
                         ALLOWED_TARGETS.contains(item.getType())
@@ -127,14 +127,14 @@ public final class EtchLoom {
                 this::onTargetChanged
         );
 
-        session.input("pre_cast", 4, 3, Fragment.class);
-        session.input("cast", 5, 3, Fragment.class);
-        session.input("post_cast", 6, 3, Fragment.class);
+        session.input("pre_cast", 4, 4, Fragment.class);
+        session.input("cast", 5, 4, Fragment.class);
+        session.input("post_cast", 6, 4, Fragment.class);
 
         // Engrave button
         session.button(
                 8,
-                3,
+                4,
                 createNamedItem(
                         Material.LIME_STAINED_GLASS_PANE,
                         ChatColor.GREEN + "Engrave"
@@ -145,7 +145,7 @@ public final class EtchLoom {
         // Tutorial button
         session.button(
                 9,
-                5,
+                6,
                 createNamedItem(
                         Material.WRITTEN_BOOK,
                         ChatColor.GOLD + "Tutorial"

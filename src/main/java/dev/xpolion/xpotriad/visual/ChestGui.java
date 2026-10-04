@@ -29,7 +29,7 @@ import java.util.function.Predicate;
 public final class ChestGui implements Listener {
 
     public static final int COLUMNS = 9;
-    public static final int ROWS = 5;
+    public static final int ROWS = 6;
     public static final int SIZE = COLUMNS * ROWS;
 
     private static final Material DEFAULT_DECORATION =
@@ -66,7 +66,7 @@ public final class ChestGui implements Listener {
         }
 
         if (y < 1 || y > ROWS) {
-            throw new IllegalArgumentException("y must be between 1 and 5");
+            throw new IllegalArgumentException("y must be between 1 and 6");
         }
 
         return (y - 1) * COLUMNS + (x - 1);
