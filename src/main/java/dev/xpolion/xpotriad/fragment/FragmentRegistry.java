@@ -15,6 +15,7 @@ public final class FragmentRegistry {
         register(new InvisibilityFragment());
         register(new SpeedFragment());
         register(new ExplosionFragment());
+        register(new MarkFragment());
     }
 
     private FragmentRegistry() {
