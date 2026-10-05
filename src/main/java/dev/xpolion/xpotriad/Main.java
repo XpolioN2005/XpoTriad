@@ -9,6 +9,8 @@ import dev.xpolion.xpotriad.fragment.FragmentItem;
 import dev.xpolion.xpotriad.fragment.FragmentRegistry;
 import dev.xpolion.xpotriad.fragment.InvisibilityFragment;
 import dev.xpolion.xpotriad.fragment.SpeedFragment;
+import dev.xpolion.xpotriad.particle.ParticleSystem;
+import dev.xpolion.xpotriad.runtime.RuntimeManager;
 import dev.xpolion.xpotriad.visual.EtchLoom;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -21,6 +23,8 @@ public final class Main extends JavaPlugin {
 
     private AbilityEngine abilityEngine;
     private EtchLoom etchLoom;
+    private RuntimeManager runtimeManager;
+    private ParticleSystem particleSystem;
 
     @Override
     public void onEnable() {
@@ -29,6 +33,12 @@ public final class Main extends JavaPlugin {
 
         abilityEngine = new AbilityEngine(this);
         etchLoom = new EtchLoom(this);
+
+        runtimeManager = new RuntimeManager(this);
+        runtimeManager.start();
+
+        particleSystem = new ParticleSystem(this);
+        particleSystem.start();
 
         getServer().getPluginManager().registerEvents(
                 new AbilityListener(abilityEngine),
@@ -40,7 +50,21 @@ public final class Main extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (particleSystem != null) {
+            particleSystem.stop();
+        }
+        if (runtimeManager != null) {
+            runtimeManager.stop();
+        }
         getLogger().info("XpoTriad disabled!");
+    }
+
+    public RuntimeManager getRuntimeManager() {
+        return runtimeManager;
+    }
+
+    public ParticleSystem getParticleSystem() {
+        return particleSystem;
     }
 
     @Override
