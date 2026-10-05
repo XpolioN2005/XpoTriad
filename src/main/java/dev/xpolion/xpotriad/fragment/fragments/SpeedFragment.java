@@ -5,6 +5,7 @@ import org.bukkit.ChatColor;
 import dev.xpolion.xpotriad.effect.effects.SpeedEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
+import dev.xpolion.xpotriad.fragment.Fragment.Type;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
  *
  * executionTime    = 20 ticks
  * rarity           = COMMON
+ * type             = MELEE
  * cooldownModifier = 0 ticks (no change to base cooldown)
  */
 public final class SpeedFragment extends Fragment {
@@ -24,6 +26,7 @@ public final class SpeedFragment extends Fragment {
                 List.of(ChatColor.GRAY + "Grants increased movement speed."),
                 20L,
                 Rarity.COMMON,
+                Type.MELEE,
                 0L,
                 new SpeedEffect()
         );

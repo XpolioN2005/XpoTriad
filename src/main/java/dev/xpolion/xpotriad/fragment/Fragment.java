@@ -20,15 +20,17 @@ import java.util.List;
  *   glint            – enchantment glint override (always true)
  *   executionTime    – minimum ticks this fragment occupies (engine adds 5-tick buffer)
  *   rarity           – rarity tier of this fragment
+ *   type             – fragment execution classification (MELEE or RANGED)
  *   cooldownModifier – ticks added to (or subtracted from) the base ability cooldown
  *   effect           – the Effect that runs when this fragment executes
  */
 public abstract class Fragment {
 
-    /**
-     * Rarity tier of a Fragment.
-     * Values are ordered from lowest to highest tier.
-     */
+    public enum Type {
+        MELEE,
+        RANGED
+    }
+
     public enum Rarity {
         COMMON(ChatColor.WHITE),
         UNCOMMON(ChatColor.GREEN),
@@ -57,6 +59,7 @@ public abstract class Fragment {
     private final boolean glint;
     private final long executionTime;
     private final Rarity rarity;
+    private final Type type;
     private final long cooldownModifier;
     private final Effect effect;
 
@@ -66,6 +69,7 @@ public abstract class Fragment {
             List<String> lore,
             long executionTime,
             Rarity rarity,
+            Type type,
             long cooldownModifier,
             Effect effect
     ) {
@@ -75,6 +79,9 @@ public abstract class Fragment {
         if (rarity == null) {
             throw new IllegalArgumentException("rarity cannot be null");
         }
+        if (type == null) {
+            throw new IllegalArgumentException("type cannot be null");
+        }
         this.id               = id;
         this.name             = name;
         this.displayName      = rarity.getColor() + name;
@@ -83,6 +90,7 @@ public abstract class Fragment {
         this.glint            = true;
         this.executionTime    = executionTime;
         this.rarity           = rarity;
+        this.type             = type;
         this.cooldownModifier = cooldownModifier;
         this.effect           = effect;
     }
@@ -111,10 +119,6 @@ public abstract class Fragment {
         return glint;
     }
 
-    /**
-     * Minimum ticks this fragment's effect occupies.
-     * The engine waits {@code executionTime + 5} ticks before advancing to the next stage.
-     */
     public final long getExecutionTime() {
         return executionTime;
     }
@@ -123,10 +127,10 @@ public abstract class Fragment {
         return rarity;
     }
 
-    /**
-     * Ticks to add (positive) or subtract (negative) from the base ability cooldown.
-     * The listener clamps the final value to [0, 300].
-     */
+    public final Type getType() {
+        return type;
+    }
+
     public final long getCooldownModifier() {
         return cooldownModifier;
     }

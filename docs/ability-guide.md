@@ -6,29 +6,30 @@
 
 ## 1. Engine Interfaces & Component Summary
 
-| Interface / Class | Category | Role |
-|---|---|---|
-| `Effect` | Gameplay | One-shot execution logic triggered during ability application. |
-| `Fragment` | Gameplay | Immutable definition of a gameplay unit executed per stage (wraps `Effect`, execution timing, lore, rarity color formatting, and cooldown modifiers). |
-| `FragmentItem` | Items & PDC | Factory and utility to generate physical `ItemStack` representations (`FLOW_POTTERY_SHERD` with glint) and inspect PDC metadata. |
-| `FragmentRegistry` | Registry | Global registry lookup mapping fragment IDs to `Fragment` instances. |
-| `AbilityContext` | Gameplay | Context container providing execution source (`Player`) and ability info. |
-| `RuntimeState` | Gameplay | Persistent gameplay condition surviving beyond initial `Effect.apply()`. |
-| `RuntimeHandle` | Gameplay | Idempotent control handle for registered `RuntimeState` instances. |
-| `RuntimeManager` | Engine Service | Entry point to register and start `RuntimeState` instances. |
-| `ParticleAnimation` | Visuals | Frame-based render contract for particle visual effects. |
-| `ParticleContext` | Visuals | Immutable frame snapshot containing resolved origin, total elapsed time, and frame delta. |
-| `ParticleAttachment` | Visuals | Enum specifying target tracking (`WORLD` for fixed coordinates, `ENTITY` for dynamic entity tracking). |
-| `ParticleHandle` | Visuals | Idempotent control handle for persistent particle animations. |
-| `ParticleSystem` | Engine Service | Entry point to play one-shot or persistent particle animations. |
+| Interface / Class    | Category       | Role                                                                                                                                                  |
+| -------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Effect`             | Gameplay       | One-shot execution logic triggered during ability application.                                                                                        |
+| `Fragment`           | Gameplay       | Immutable definition of a gameplay unit executed per stage (wraps `Effect`, execution timing, lore, rarity color formatting, and cooldown modifiers). |
+| `FragmentItem`       | Items & PDC    | Factory and utility to generate physical `ItemStack` representations (`FLOW_POTTERY_SHERD` with glint) and inspect PDC metadata.                      |
+| `FragmentRegistry`   | Registry       | Global registry lookup mapping fragment IDs to `Fragment` instances.                                                                                  |
+| `AbilityContext`     | Gameplay       | Context container providing execution source (`Player`) and ability info.                                                                             |
+| `RuntimeState`       | Gameplay       | Persistent gameplay condition surviving beyond initial `Effect.apply()`.                                                                              |
+| `RuntimeHandle`      | Gameplay       | Idempotent control handle for registered `RuntimeState` instances.                                                                                    |
+| `RuntimeManager`     | Engine Service | Entry point to register and start `RuntimeState` instances.                                                                                           |
+| `ParticleAnimation`  | Visuals        | Frame-based render contract for particle visual effects.                                                                                              |
+| `ParticleContext`    | Visuals        | Immutable frame snapshot containing resolved origin, total elapsed time, and frame delta.                                                             |
+| `ParticleAttachment` | Visuals        | Enum specifying target tracking (`WORLD` for fixed coordinates, `ENTITY` for dynamic entity tracking).                                                |
+| `ParticleHandle`     | Visuals        | Idempotent control handle for persistent particle animations.                                                                                         |
+| `ParticleSystem`     | Engine Service | Entry point to play one-shot or persistent particle animations.                                                                                       |
 
 ---
 
 ## 2. Interface Specifications
 
 ### `Effect`
+
 ```java
-package dev.xpolion.xpotriad.effects;
+package dev.xpolion.xpotriad.effect;
 
 import dev.xpolion.xpotriad.ability.AbilityContext;
 
@@ -38,6 +39,7 @@ public interface Effect {
 ```
 
 ### `Fragment`
+
 ```java
 package dev.xpolion.xpotriad.fragment;
 
@@ -84,6 +86,7 @@ public abstract class Fragment {
 ```
 
 ### `FragmentItem`
+
 ```java
 package dev.xpolion.xpotriad.fragment;
 
@@ -99,6 +102,7 @@ public final class FragmentItem {
 ```
 
 ### `FragmentRegistry`
+
 ```java
 package dev.xpolion.xpotriad.fragment;
 
@@ -109,6 +113,7 @@ public final class FragmentRegistry {
 ```
 
 ### `RuntimeState`
+
 ```java
 package dev.xpolion.xpotriad.runtime;
 
@@ -120,6 +125,7 @@ public interface RuntimeState {
 ```
 
 ### `RuntimeHandle`
+
 ```java
 package dev.xpolion.xpotriad.runtime;
 
@@ -130,6 +136,7 @@ public interface RuntimeHandle {
 ```
 
 ### `RuntimeManager`
+
 ```java
 package dev.xpolion.xpotriad.runtime;
 
@@ -139,6 +146,7 @@ public final class RuntimeManager {
 ```
 
 ### `ParticleAnimation`
+
 ```java
 package dev.xpolion.xpotriad.particle;
 
@@ -148,6 +156,7 @@ public interface ParticleAnimation {
 ```
 
 ### `ParticleContext`
+
 ```java
 package dev.xpolion.xpotriad.particle;
 
@@ -161,6 +170,7 @@ public final class ParticleContext {
 ```
 
 ### `ParticleAttachment`
+
 ```java
 package dev.xpolion.xpotriad.particle;
 
@@ -171,6 +181,7 @@ public enum ParticleAttachment {
 ```
 
 ### `ParticleHandle`
+
 ```java
 package dev.xpolion.xpotriad.particle;
 
@@ -181,6 +192,7 @@ public interface ParticleHandle {
 ```
 
 ### `ParticleSystem`
+
 ```java
 package dev.xpolion.xpotriad.particle;
 
@@ -215,7 +227,7 @@ Below is a complete implementation example demonstrating how a developer uses th
 import dev.xpolion.xpotriad.ability.Ability;
 import dev.xpolion.xpotriad.ability.AbilityContext;
 import dev.xpolion.xpotriad.ability.AbilityItem;
-import dev.xpolion.xpotriad.effects.Effect;
+import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.FragmentItem;
 import dev.xpolion.xpotriad.particle.*;

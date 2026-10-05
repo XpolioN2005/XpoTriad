@@ -132,7 +132,6 @@ Gives:
 | `xpotriad:ability` | STRING | `"ability"` (presence marker) |
 | `xpotriad:item_type` | STRING | `"ability"` |
 | `xpotriad:ability_id` | STRING | UUID string |
-| `xpotriad:weapon_type` | STRING | `"MELEE"` or `"RANGED"` |
 | `xpotriad:pre_cast_fragment` | STRING | fragment id, e.g. `"invisibility"` |
 | `xpotriad:cast_fragment` | STRING | fragment id, e.g. `"speed"` |
 | `xpotriad:post_cast_fragment` | STRING | fragment id, e.g. `"explosion"` |

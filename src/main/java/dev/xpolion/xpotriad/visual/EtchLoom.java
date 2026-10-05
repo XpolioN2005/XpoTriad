@@ -42,8 +42,6 @@ public final class EtchLoom {
 
             Material.MACE,
 
-            Material.BOW, Material.CROSSBOW,
-
             Material.BREEZE_ROD, Material.BLAZE_ROD, Material.STICK
     );
 
@@ -295,10 +293,7 @@ public final class EtchLoom {
             return false;
         }
 
-        Ability.WeaponType weaponType =
-                determineWeaponType(targetItem.getType());
-
-        Ability ability = new Ability(weaponType);
+        Ability ability = new Ability();
 
         if (preFragment != null) {
             ability.setFragment(
@@ -354,15 +349,6 @@ public final class EtchLoom {
         session.returnItem(engravedTarget);
 
         return true;
-    }
-
-    public static Ability.WeaponType determineWeaponType(Material material) {
-        if (material == Material.BOW
-                || material == Material.CROSSBOW) {
-            return Ability.WeaponType.RANGED;
-        }
-
-        return Ability.WeaponType.MELEE;
     }
 
     private static ItemStack createInfoPane(

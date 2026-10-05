@@ -23,7 +23,6 @@ import java.util.UUID;
  *   xpotriad:ability          - presence marker
  *   xpotriad:item_type        - "ability"
  *   xpotriad:ability_id       - unique ability identifier
- *   xpotriad:weapon_type      - MELEE / RANGED
  *   xpotriad:pre_cast_fragment
  *   xpotriad:cast_fragment
  *   xpotriad:post_cast_fragment
@@ -36,7 +35,6 @@ public final class AbilityItem {
     private static NamespacedKey abilityKey;
     private static NamespacedKey itemTypeKey;
     private static NamespacedKey abilityIdKey;
-    private static NamespacedKey weaponTypeKey;
     private static NamespacedKey cooldownUntilKey;
 
     private static final NamespacedKey[] fragmentKeys =
@@ -49,7 +47,6 @@ public final class AbilityItem {
         abilityKey       = new NamespacedKey(plugin, "ability");
         itemTypeKey      = new NamespacedKey(plugin, "item_type");
         abilityIdKey     = new NamespacedKey(plugin, "ability_id");
-        weaponTypeKey    = new NamespacedKey(plugin, "weapon_type");
         cooldownUntilKey = new NamespacedKey(plugin, "cooldown_until");
 
         fragmentKeys[Ability.Stage.PRE_CAST.ordinal()] =
@@ -103,12 +100,6 @@ public final class AbilityItem {
                 UUID.randomUUID().toString()
         );
 
-        pdc.set(
-                weaponTypeKey,
-                PersistentDataType.STRING,
-                ability.getWeaponType().name()
-        );
-
         // -----------------------------------------------------------------
         // Fragments
         // -----------------------------------------------------------------
@@ -160,22 +151,7 @@ public final class AbilityItem {
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
-        String weaponTypeName =
-                pdc.get(weaponTypeKey, PersistentDataType.STRING);
-
-        if (weaponTypeName == null) {
-            return null;
-        }
-
-        Ability.WeaponType weaponType;
-
-        try {
-            weaponType = Ability.WeaponType.valueOf(weaponTypeName);
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-
-        Ability ability = new Ability(weaponType);
+        Ability ability = new Ability();
 
         for (Ability.Stage stage : Ability.Stage.values()) {
             int index = stage.ordinal();
@@ -292,23 +268,9 @@ public final class AbilityItem {
 
         lore.add(ChatColor.DARK_PURPLE + "Ability");
 
-        addStageLore(
-                lore,
-                "Pre-Cast",
-                ability.getFragment(Ability.Stage.PRE_CAST)
-        );
-
-        addStageLore(
-                lore,
-                "Cast",
-                ability.getFragment(Ability.Stage.CAST)
-        );
-
-        addStageLore(
-                lore,
-                "Post-Cast",
-                ability.getFragment(Ability.Stage.POST_CAST)
-        );
+        addStageLore(lore, "Pre-Cast",  ability.getFragment(Ability.Stage.PRE_CAST));
+        addStageLore(lore, "Cast",      ability.getFragment(Ability.Stage.CAST));
+        addStageLore(lore, "Post-Cast", ability.getFragment(Ability.Stage.POST_CAST));
 
         long cooldownTicks = ability.calculateCooldown();
         double cooldownSeconds = cooldownTicks / 20.0;
@@ -323,26 +285,40 @@ public final class AbilityItem {
         return lore;
     }
 
+    /**
+     * Adds two lore lines per occupied stage:
+     *
+     *   Pre-Cast: <Fragment Name> [<RARITY>]
+     *   Execution Time: <time>
+     *
+     * If the stage is empty, adds the existing "Empty" single line only.
+     */
     private static void addStageLore(
             List<String> lore,
             String displayName,
             Fragment fragment
     ) {
-        String fragmentName;
-
         if (fragment == null) {
-            fragmentName = ChatColor.GRAY + "Empty";
-        } else {
-            fragmentName =
-                    ChatColor.WHITE
-                            + ChatColor.stripColor(fragment.getDisplayName());
+            lore.add(ChatColor.LIGHT_PURPLE + displayName + ": " + ChatColor.GRAY + "Empty");
+            return;
         }
 
+        // Stage label + fragment name (white) + rarity tag in rarity color
+        String rarityTag =
+                fragment.getRarity().getColor()
+                + "[" + fragment.getRarity().name() + "]";
+
         lore.add(
-                ChatColor.LIGHT_PURPLE
-                        + displayName
-                        + ": "
-                        + fragmentName
+                ChatColor.LIGHT_PURPLE + displayName + ": "
+                + ChatColor.WHITE + ChatColor.stripColor(fragment.getDisplayName()) + " "
+                + rarityTag
+        );
+
+        // Execution time on the next line, indented
+        double execSeconds = fragment.getExecutionTime() / 20.0;
+        lore.add(
+                ChatColor.GRAY + "Execution Time: "
+                + ChatColor.WHITE + formatCooldown(execSeconds)
         );
     }
 
@@ -371,7 +347,6 @@ public final class AbilityItem {
         pdc.remove(abilityKey);
         pdc.remove(itemTypeKey);
         pdc.remove(abilityIdKey);
-        pdc.remove(weaponTypeKey);
         pdc.remove(cooldownUntilKey);
 
         for (NamespacedKey fragmentKey : fragmentKeys) {

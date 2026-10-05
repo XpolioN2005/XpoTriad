@@ -17,16 +17,9 @@ public final class Ability {
         POST_CAST
     }
 
-    public enum WeaponType {
-        MELEE,
-        RANGED
-    }
-
-    private final WeaponType weaponType;
     private final Map<Stage, Fragment> fragments = new EnumMap<>(Stage.class);
 
-    public Ability(WeaponType weaponType) {
-        this.weaponType = weaponType;
+    public Ability() {
     }
 
     public void setFragment(Stage stage, Fragment fragment) {
@@ -35,10 +28,6 @@ public final class Ability {
 
     public Fragment getFragment(Stage stage) {
         return fragments.get(stage);
-    }
-
-    public WeaponType getWeaponType() {
-        return weaponType;
     }
 
     /**

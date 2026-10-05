@@ -5,6 +5,7 @@ import java.util.List;
 import dev.xpolion.xpotriad.effect.effects.MarkEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
+import dev.xpolion.xpotriad.fragment.Fragment.Type;
 
 /**
  * Applies a temporary 10-second Mark to a target entity.
@@ -12,6 +13,7 @@ import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
  *
  * executionTime    = 10 ticks
  * rarity           = EPIC
+ * type             = MELEE
  * cooldownModifier = +30 ticks
  */
 public final class MarkFragment extends Fragment {
@@ -26,6 +28,7 @@ public final class MarkFragment extends Fragment {
                 ),
                 10L,
                 Rarity.EPIC,
+                Type.MELEE,
                 30L,
                 new MarkEffect()
         );

@@ -5,6 +5,7 @@ import org.bukkit.ChatColor;
 import dev.xpolion.xpotriad.effect.effects.InvisibilityEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
+import dev.xpolion.xpotriad.fragment.Fragment.Type;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
  *
  * executionTime    = 10 ticks
  * rarity           = UNCOMMON
+ * type             = MELEE
  * cooldownModifier = +10 ticks
  */
 public final class InvisibilityFragment extends Fragment {
@@ -24,6 +26,7 @@ public final class InvisibilityFragment extends Fragment {
                 List.of(ChatColor.GRAY + "Grants invisibility."),
                 10L,
                 Rarity.UNCOMMON,
+                Type.MELEE,
                 10L,
                 new InvisibilityEffect()
         );

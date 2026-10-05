@@ -15,7 +15,7 @@ import org.bukkit.inventory.ItemStack;
 /**
  * Handles ability activation.
  *
- * ALL abilities (MELEE and RANGED) activate exclusively via right-click.
+ * All abilities activate exclusively via right-click.
  * Cooldown is item-specific and checked/written on the physical ItemStack PDC.
  */
 public final class AbilityListener implements Listener {

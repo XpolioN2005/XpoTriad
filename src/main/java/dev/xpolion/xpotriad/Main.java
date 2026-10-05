@@ -6,9 +6,7 @@ import dev.xpolion.xpotriad.ability.AbilityItem;
 import dev.xpolion.xpotriad.ability.AbilityListener;
 import dev.xpolion.xpotriad.fragment.FragmentItem;
 import dev.xpolion.xpotriad.fragment.FragmentRegistry;
-import dev.xpolion.xpotriad.fragment.fragments.ExplosionFragment;
-import dev.xpolion.xpotriad.fragment.fragments.InvisibilityFragment;
-import dev.xpolion.xpotriad.fragment.fragments.SpeedFragment;
+import dev.xpolion.xpotriad.fragment.fragments.*;
 import dev.xpolion.xpotriad.particle.ParticleSystem;
 import dev.xpolion.xpotriad.runtime.RuntimeManager;
 import dev.xpolion.xpotriad.visual.EtchLoom;
@@ -93,8 +91,9 @@ public final class Main extends JavaPlugin {
                 (SpeedFragment) FragmentRegistry.get("speed");
         ExplosionFragment explosion =
                 (ExplosionFragment) FragmentRegistry.get("explosion");
+        MarkFragment mark = (MarkFragment) FragmentRegistry.get("mark");
 
-        Ability ability = new Ability(Ability.WeaponType.MELEE);
+        Ability ability = new Ability();
 
         ability.setFragment(Ability.Stage.PRE_CAST,  invisibility);
         ability.setFragment(Ability.Stage.CAST,      speed);
@@ -109,6 +108,7 @@ public final class Main extends JavaPlugin {
         player.getInventory().addItem(FragmentItem.create(invisibility));
         player.getInventory().addItem(FragmentItem.create(speed));
         player.getInventory().addItem(FragmentItem.create(explosion));
+        player.getInventory().addItem(FragmentItem.create(mark));
 
         return true;
     }

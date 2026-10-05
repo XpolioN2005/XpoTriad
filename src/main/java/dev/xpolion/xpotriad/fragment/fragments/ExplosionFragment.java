@@ -5,6 +5,7 @@ import org.bukkit.ChatColor;
 import dev.xpolion.xpotriad.effect.effects.ExplosionEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
+import dev.xpolion.xpotriad.fragment.Fragment.Type;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ import java.util.List;
  *
  * executionTime    = 0 ticks
  * rarity           = RARE
+ * type             = MELEE
  * cooldownModifier = +40 ticks
  */
 public final class ExplosionFragment extends Fragment {
@@ -24,6 +26,7 @@ public final class ExplosionFragment extends Fragment {
                 List.of(ChatColor.GRAY + "Creates an explosion."),
                 0L,
                 Rarity.RARE,
+                Type.MELEE,
                 40L,
                 new ExplosionEffect()
         );
