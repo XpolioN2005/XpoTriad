@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.fragment;
 
 import dev.xpolion.xpotriad.ability.AbilityContext;
 import dev.xpolion.xpotriad.effects.Effect;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 
 import java.util.List;
@@ -11,10 +12,11 @@ import java.util.List;
  *
  * Fields:
  *   id               – registry key
- *   displayName      – coloured display name
- *   material         – physical item material
+ *   name             – raw display name
+ *   displayName      – coloured display name based on rarity
+ *   material         – physical item material (FLOW_POTTERY_SHERD for all fragments)
  *   lore             – physical item lore lines
- *   glint            – enchantment glint override
+ *   glint            – enchantment glint override (always true)
  *   executionTime    – minimum ticks this fragment occupies (engine adds 5-tick buffer)
  *   rarity           – rarity tier of this fragment
  *   cooldownModifier – ticks added to (or subtracted from) the base ability cooldown
@@ -27,14 +29,27 @@ public abstract class Fragment {
      * Values are ordered from lowest to highest tier.
      */
     public enum Rarity {
-        COMMON,
-        UNCOMMON,
-        RARE,
-        EPIC,
-        LEGENDARY
+        COMMON(ChatColor.WHITE),
+        UNCOMMON(ChatColor.GREEN),
+        RARE(ChatColor.AQUA),
+        EPIC(ChatColor.LIGHT_PURPLE),
+        LEGENDARY(ChatColor.GOLD);
+
+        private final ChatColor color;
+
+        Rarity(ChatColor color) {
+            this.color = color;
+        }
+
+        public ChatColor getColor() {
+            return color;
+        }
     }
 
+    private static final Material DEFAULT_MATERIAL = Material.FLOW_POTTERY_SHERD;
+
     private final String id;
+    private final String name;
     private final String displayName;
     private final Material material;
     private final List<String> lore;
@@ -44,16 +59,10 @@ public abstract class Fragment {
     private final long cooldownModifier;
     private final Effect effect;
 
-    // ------------------------------------------------------------------
-    // Convenience constructors – all chain to the full constructor
-    // ------------------------------------------------------------------
-
     protected Fragment(
             String id,
-            String displayName,
-            Material material,
+            String name,
             List<String> lore,
-            boolean glint,
             long executionTime,
             Rarity rarity,
             long cooldownModifier,
@@ -62,23 +71,27 @@ public abstract class Fragment {
         if (executionTime < 0) {
             throw new IllegalArgumentException("executionTime cannot be negative");
         }
+        if (rarity == null) {
+            throw new IllegalArgumentException("rarity cannot be null");
+        }
         this.id               = id;
-        this.displayName      = displayName;
-        this.material         = material;
+        this.name             = name;
+        this.displayName      = rarity.getColor() + name;
+        this.material         = DEFAULT_MATERIAL;
         this.lore             = List.copyOf(lore);
-        this.glint            = glint;
+        this.glint            = true;
         this.executionTime    = executionTime;
         this.rarity           = rarity;
         this.cooldownModifier = cooldownModifier;
         this.effect           = effect;
     }
 
-    // ------------------------------------------------------------------
-    // Accessors
-    // ------------------------------------------------------------------
-
     public final String getId() {
         return id;
+    }
+
+    public final String getName() {
+        return name;
     }
 
     public final String getDisplayName() {
@@ -120,10 +133,6 @@ public abstract class Fragment {
     public final Effect getEffect() {
         return effect;
     }
-
-    // ------------------------------------------------------------------
-    // Execution
-    // ------------------------------------------------------------------
 
     public final void execute(AbilityContext context) {
         effect.apply(context);

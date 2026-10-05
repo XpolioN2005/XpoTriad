@@ -2,7 +2,6 @@ package dev.xpolion.xpotriad.fragment;
 
 import dev.xpolion.xpotriad.effects.InvisibilityEffect;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 
 import java.util.List;
 
@@ -18,10 +17,8 @@ public final class InvisibilityFragment extends Fragment {
     public InvisibilityFragment() {
         super(
                 "invisibility",
-                ChatColor.LIGHT_PURPLE + "Invisibility Fragment",
-                Material.AMETHYST_SHARD,
+                "Invisibility Fragment",
                 List.of(ChatColor.GRAY + "Grants invisibility."),
-                true,
                 10L,
                 Rarity.UNCOMMON,
                 10L,

@@ -2,7 +2,6 @@ package dev.xpolion.xpotriad.fragment;
 
 import dev.xpolion.xpotriad.effects.SpeedEffect;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 
 import java.util.List;
 
@@ -18,10 +17,8 @@ public final class SpeedFragment extends Fragment {
     public SpeedFragment() {
         super(
                 "speed",
-                ChatColor.AQUA + "Speed Fragment",
-                Material.FEATHER,
+                "Speed Fragment",
                 List.of(ChatColor.GRAY + "Grants increased movement speed."),
-                true,
                 20L,
                 Rarity.COMMON,
                 0L,

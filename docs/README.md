@@ -8,6 +8,7 @@
 
 | Document | Description |
 |---|---|
+| [ability-guide.md](./ability-guide.md) | Engine API reference and end-to-end ability creation guide |
 | [architecture.md](./architecture.md) | Layer overview, package map, class responsibilities, cooldown & targeting design |
 | [flows.md](./flows.md) | Full execution flows: right-click activation, cooldown checking/application, stage sequencing, spatial querying |
 | [code-guide.md](./code-guide.md) | Annotated code snippets for every key class |
