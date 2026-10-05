@@ -3,6 +3,11 @@ package dev.xpolion.xpotriad.fragment;
 import java.util.HashMap;
 import java.util.Map;
 
+import dev.xpolion.xpotriad.fragment.fragments.ExplosionFragment;
+import dev.xpolion.xpotriad.fragment.fragments.InvisibilityFragment;
+import dev.xpolion.xpotriad.fragment.fragments.MarkFragment;
+import dev.xpolion.xpotriad.fragment.fragments.SpeedFragment;
+
 /**
  * Static registry of all registered Fragment definitions.
  * Fragment IDs map to concrete Fragment instances.

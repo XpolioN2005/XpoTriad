@@ -1,4 +1,4 @@
-package dev.xpolion.xpotriad.effects;
+package dev.xpolion.xpotriad.effect;
 
 import dev.xpolion.xpotriad.ability.AbilityContext;
 

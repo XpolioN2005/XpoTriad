@@ -1,9 +1,11 @@
-package dev.xpolion.xpotriad.runtime;
+package dev.xpolion.xpotriad.runtime.states;
 
-import dev.xpolion.xpotriad.particle.MarkAnimation;
-import dev.xpolion.xpotriad.particle.MarkBurstAnimation;
 import dev.xpolion.xpotriad.particle.ParticleHandle;
 import dev.xpolion.xpotriad.particle.ParticleSystem;
+import dev.xpolion.xpotriad.particle.animations.MarkAnimation;
+import dev.xpolion.xpotriad.particle.animations.MarkBurstAnimation;
+import dev.xpolion.xpotriad.runtime.RuntimeState;
+
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;

@@ -1,7 +1,10 @@
-package dev.xpolion.xpotriad.fragment;
+package dev.xpolion.xpotriad.fragment.fragments;
 
-import dev.xpolion.xpotriad.effects.InvisibilityEffect;
 import org.bukkit.ChatColor;
+
+import dev.xpolion.xpotriad.effect.effects.InvisibilityEffect;
+import dev.xpolion.xpotriad.fragment.Fragment;
+import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
 
 import java.util.List;
 

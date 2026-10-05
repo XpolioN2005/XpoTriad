@@ -1,10 +1,11 @@
-package dev.xpolion.xpotriad.effects;
+package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.particle.ParticleSystem;
-import dev.xpolion.xpotriad.runtime.MarkState;
 import dev.xpolion.xpotriad.runtime.RuntimeManager;
+import dev.xpolion.xpotriad.runtime.states.MarkState;
 import dev.xpolion.xpotriad.targeting.TargetResolver;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;

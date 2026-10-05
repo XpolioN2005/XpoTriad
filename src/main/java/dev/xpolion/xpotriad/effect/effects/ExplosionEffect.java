@@ -1,7 +1,8 @@
-package dev.xpolion.xpotriad.effects;
+package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.ability.Ability;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.targeting.TargetResolver;
 import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;

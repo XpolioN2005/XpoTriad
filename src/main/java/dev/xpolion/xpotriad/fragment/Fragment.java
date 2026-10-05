@@ -1,7 +1,8 @@
 package dev.xpolion.xpotriad.fragment;
 
 import dev.xpolion.xpotriad.ability.AbilityContext;
-import dev.xpolion.xpotriad.effects.Effect;
+import dev.xpolion.xpotriad.effect.Effect;
+
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 

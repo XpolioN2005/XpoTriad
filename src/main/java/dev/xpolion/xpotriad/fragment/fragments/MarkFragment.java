@@ -1,8 +1,10 @@
-package dev.xpolion.xpotriad.fragment;
-
-import dev.xpolion.xpotriad.effects.MarkEffect;
+package dev.xpolion.xpotriad.fragment.fragments;
 
 import java.util.List;
+
+import dev.xpolion.xpotriad.effect.effects.MarkEffect;
+import dev.xpolion.xpotriad.fragment.Fragment;
+import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
 
 /**
  * Applies a temporary 10-second Mark to a target entity.

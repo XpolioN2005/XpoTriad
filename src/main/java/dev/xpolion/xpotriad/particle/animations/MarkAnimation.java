@@ -1,8 +1,11 @@
-package dev.xpolion.xpotriad.particle;
+package dev.xpolion.xpotriad.particle.animations;
 
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
+
+import dev.xpolion.xpotriad.particle.ParticleAnimation;
+import dev.xpolion.xpotriad.particle.ParticleContext;
 
 public final class MarkAnimation implements ParticleAnimation {
 
