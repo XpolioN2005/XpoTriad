@@ -5,6 +5,7 @@ import dev.xpolion.xpotriad.ability.AbilityEngine;
 import dev.xpolion.xpotriad.ability.AbilityItem;
 import dev.xpolion.xpotriad.ability.AbilityListener;
 import dev.xpolion.xpotriad.fragment.FragmentItem;
+import dev.xpolion.xpotriad.fragment.FragmentLootListener;
 import dev.xpolion.xpotriad.fragment.FragmentRegistry;
 import dev.xpolion.xpotriad.fragment.fragments.*;
 import dev.xpolion.xpotriad.particle.ParticleSystem;
@@ -41,6 +42,11 @@ public final class Main extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new AbilityListener(abilityEngine),
                 this
+        );
+
+        getServer().getPluginManager().registerEvents(
+        new FragmentLootListener(),
+        this
         );
 
         getLogger().info("XpoTriad enabled!");

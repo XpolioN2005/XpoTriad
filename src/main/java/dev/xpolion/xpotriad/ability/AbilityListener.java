@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.ability;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.audience.Audience;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
@@ -33,10 +34,10 @@ import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
  * gets a chance to activate. The vanilla interaction is only cancelled when
  * an ability actually executes.
  *
- * <p>Action bar feedback (only hands holding ability items are shown):
+ * <p>Action bar feedback:
  * <pre>
- *   &lt; CD | Fired &gt;
- *   &lt; Fired | CD &gt;
+ *   &lt; 2.0s | Fired &gt;
+ *   &lt; Fired | 1.5s &gt;
  *   &lt; Fired | Ready &gt;
  *   &lt; Fired
  *   Ready &gt;
@@ -59,9 +60,7 @@ public final class AbilityListener implements Listener {
             return;
         }
 
-        // Respect protection plugins that denied item use. Checked via the
-        // result rather than isCancelled(), because air clicks always have
-        // the block result set to DENY.
+        // Respect protection plugins that denied item use.
         if (event.useItemInHand() == Event.Result.DENY) {
             return;
         }
@@ -88,20 +87,22 @@ public final class AbilityListener implements Listener {
          * on cooldown, the main-hand ability can still fire.
          */
         ActivationResult offHandResult = tryActivate(player, offHand);
-        if (offHandResult.fired()) {
+
+        if (offHandResult.isFired()) {
             event.setCancelled(true);
             sendFeedback(player, offHandResult, getState(mainHand));
             return;
         }
 
         ActivationResult mainHandResult = tryActivate(player, mainHand);
-        if (mainHandResult.fired()) {
+
+        if (mainHandResult.isFired()) {
             event.setCancelled(true);
             sendFeedback(player, offHandResult, mainHandResult);
             return;
         }
 
-        // Nothing fired: show cooldowns, leave the vanilla interaction intact.
+        // Nothing fired: show cooldowns and leave vanilla interaction intact.
         sendFeedback(player, offHandResult, mainHandResult);
     }
 
@@ -113,8 +114,7 @@ public final class AbilityListener implements Listener {
      * the HAND event is the canonical one.
      *
      * <p>The exception: right-clicking air with an empty main hand produces
-     * only an OFF_HAND event, so that one must be handled or off-hand-only
-     * abilities would never fire.
+     * only an OFF_HAND event, so that one must be handled.
      */
     private boolean shouldProcess(
             EquipmentSlot eventHand,
@@ -133,18 +133,20 @@ public final class AbilityListener implements Listener {
     /**
      * Attempts to activate the ability on the given item.
      *
-     * <p>The cooldown is applied only after the ability executed without
+     * <p>The cooldown is applied only after the ability executes without
      * throwing, so a failed execution does not burn the cooldown.
      *
-     * @return the resulting state: EMPTY, COOLDOWN or FIRED
+     * @return the resulting state: EMPTY, READY, COOLDOWN or FIRED
      */
     private ActivationResult tryActivate(Player player, ItemStack item) {
         ActivationResult state = getState(item);
+
         if (state.state() != State.READY) {
             return state;
         }
 
         Ability ability = AbilityItem.read(item);
+
         if (ability == null) {
             return ActivationResult.empty();
         }
@@ -152,6 +154,7 @@ public final class AbilityListener implements Listener {
         long cooldownTicks = ability.calculateCooldown();
 
         abilityEngine.execute(new AbilityContext(player, ability));
+
         AbilityItem.applyCooldown(item, cooldownTicks);
 
         return ActivationResult.fired();
@@ -181,8 +184,8 @@ public final class AbilityListener implements Listener {
     /**
      * Builds the compact action bar.
      *
-     * <p>Off-hand is represented by "&lt;", main-hand by "&gt;". Only hands
-     * containing an ability item are rendered.
+     * <p>Off-hand is represented by "&lt;", main-hand by "&gt;".
+     * Only hands containing an ability item are rendered.
      */
     private void sendFeedback(
             Player player,
@@ -205,7 +208,9 @@ public final class AbilityListener implements Listener {
         }
 
         if (hasOffHand && hasMainHand) {
-            message = message.append(Component.text(" | ", NamedTextColor.GRAY));
+            message = message.append(
+                    Component.text(" | ", NamedTextColor.GRAY)
+            );
         }
 
         if (hasMainHand) {
@@ -213,11 +218,15 @@ public final class AbilityListener implements Listener {
                     .append(mainHand.toComponent())
                     .append(Component.text(" >", NamedTextColor.GRAY));
         }
-
-        player.sendActionBar(message);
+        
+        Audience audience = player;
+        audience.sendActionBar(message);
     }
 
-    private record ActivationResult(State state, long remainingTicks) {
+    private record ActivationResult(
+            State state,
+            long remainingTicks
+    ) {
 
         static ActivationResult empty() {
             return new ActivationResult(State.EMPTY, 0);
@@ -235,7 +244,7 @@ public final class AbilityListener implements Listener {
             return new ActivationResult(State.COOLDOWN, remainingTicks);
         }
 
-        boolean fired() {
+        boolean isFired() {
             return state == State.FIRED;
         }
 
@@ -245,13 +254,24 @@ public final class AbilityListener implements Listener {
 
         Component toComponent() {
             return switch (state) {
-                case FIRED -> Component.text("Fired", NamedTextColor.GREEN);
-                case COOLDOWN -> Component.text(
-                        String.format(Locale.ROOT, "%.1fs", remainingTicks / 20.0),
-                        NamedTextColor.RED
-                );
-                case READY -> Component.text("Ready", NamedTextColor.YELLOW);
-                case EMPTY -> Component.empty();
+                case FIRED ->
+                        Component.text("Fired", NamedTextColor.GREEN);
+
+                case COOLDOWN ->
+                        Component.text(
+                                String.format(
+                                        Locale.ROOT,
+                                        "%.1fs",
+                                        remainingTicks / 20.0
+                                ),
+                                NamedTextColor.RED
+                        );
+
+                case READY ->
+                        Component.text("Ready", NamedTextColor.YELLOW);
+
+                case EMPTY ->
+                        Component.empty();
             };
         }
     }
