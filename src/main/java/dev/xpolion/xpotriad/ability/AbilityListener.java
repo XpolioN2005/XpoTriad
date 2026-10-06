@@ -1,43 +1,50 @@
 package dev.xpolion.xpotriad.ability;
 
-import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.Locale;
+
+import static org.bukkit.event.block.Action.RIGHT_CLICK_AIR;
+import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
 
 /**
  * Handles ability activation.
  *
- * Right-click -> ability item in the main hand.
- * Left-click  -> ability item in the off hand.
+ * <p>Right-click attempts to activate an ability.
  *
- * Each click is its own event, so both hands can fire independently,
- * but a short global cast lock keeps their ordering deterministic.
- * Cooldown is item-specific and checked/written on the physical ItemStack PDC.
- * The vanilla interaction is only cancelled when an ability actually executes.
+ * <p>Priority:
+ * <ol>
+ *   <li>Off-hand</li>
+ *   <li>Main-hand</li>
+ * </ol>
+ *
+ * <p>If the off-hand ability is on cooldown, the main-hand ability still
+ * gets a chance to activate. The vanilla interaction is only cancelled when
+ * an ability actually executes.
+ *
+ * <p>Action bar feedback (only hands holding ability items are shown):
+ * <pre>
+ *   &lt; CD | Fired &gt;
+ *   &lt; Fired | CD &gt;
+ *   &lt; Fired | Ready &gt;
+ *   &lt; Fired
+ *   Ready &gt;
+ * </pre>
  */
 public final class AbilityListener implements Listener {
 
-    /** Global per-player delay between casts (3 ticks = 150ms). */
-    private static final long CAST_LOCK_TICKS = 3;
-
     private final AbilityEngine abilityEngine;
-
-    /** Server tick of each player's last successful cast. */
-    private final Map<UUID, Integer> lastCastTick = new HashMap<>();
 
     public AbilityListener(AbilityEngine abilityEngine) {
         this.abilityEngine = abilityEngine;
@@ -45,73 +52,214 @@ public final class AbilityListener implements Listener {
 
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        // Enforce main hand only: right-click fires HAND then OFF_HAND, so ignoring
-        // OFF_HAND avoids duplicate activation. Left-click only ever fires for HAND.
-        if (event.getHand() != EquipmentSlot.HAND) {
+        Action action = event.getAction();
+
+        // Abilities are activated exclusively with right-click.
+        if (action != RIGHT_CLICK_AIR && action != RIGHT_CLICK_BLOCK) {
+            return;
+        }
+
+        // Respect protection plugins that denied item use. Checked via the
+        // result rather than isCancelled(), because air clicks always have
+        // the block result set to DENY.
+        if (event.useItemInHand() == Event.Result.DENY) {
+            return;
+        }
+
+        EquipmentSlot eventHand = event.getHand();
+        if (eventHand == null) {
             return;
         }
 
         Player player = event.getPlayer();
-        PlayerInventory inv = player.getInventory();
+        PlayerInventory inventory = player.getInventory();
 
-        // Right-click -> main hand item, left-click -> off hand item
-        ItemStack item = switch (event.getAction()) {
-            case RIGHT_CLICK_AIR, RIGHT_CLICK_BLOCK -> inv.getItemInMainHand();
-            case LEFT_CLICK_AIR, LEFT_CLICK_BLOCK -> inv.getItemInOffHand();
-            default -> null;
-        };
+        ItemStack mainHand = inventory.getItemInMainHand();
+        ItemStack offHand = inventory.getItemInOffHand();
 
-        // Only cancel the vanilla interaction if the ability actually executed
-        if (item != null && tryActivate(player, item)) {
-            event.setCancelled(true);
+        if (!shouldProcess(eventHand, action, mainHand)) {
+            return;
         }
+
+        /*
+         * Priority: OFF_HAND -> MAIN_HAND.
+         *
+         * A cooldown does not consume priority. If the off-hand ability is
+         * on cooldown, the main-hand ability can still fire.
+         */
+        ActivationResult offHandResult = tryActivate(player, offHand);
+        if (offHandResult.fired()) {
+            event.setCancelled(true);
+            sendFeedback(player, offHandResult, getState(mainHand));
+            return;
+        }
+
+        ActivationResult mainHandResult = tryActivate(player, mainHand);
+        if (mainHandResult.fired()) {
+            event.setCancelled(true);
+            sendFeedback(player, offHandResult, mainHandResult);
+            return;
+        }
+
+        // Nothing fired: show cooldowns, leave the vanilla interaction intact.
+        sendFeedback(player, offHandResult, mainHandResult);
     }
 
     /**
-     * @return true if the ability executed (and the vanilla interaction should be cancelled)
+     * Decides whether this interact event should be processed.
+     *
+     * <p>A single physical right-click can produce a HAND event followed by
+     * an OFF_HAND event. Processing both would risk a double activation, so
+     * the HAND event is the canonical one.
+     *
+     * <p>The exception: right-clicking air with an empty main hand produces
+     * only an OFF_HAND event, so that one must be handled or off-hand-only
+     * abilities would never fire.
      */
-    private boolean tryActivate(Player player, ItemStack item) {
-        if (!AbilityItem.isAbilityItem(item)) {
-            return false;
+    private boolean shouldProcess(
+            EquipmentSlot eventHand,
+            Action action,
+            ItemStack mainHand
+    ) {
+        if (eventHand == EquipmentSlot.HAND) {
+            return true;
+        }
+
+        return eventHand == EquipmentSlot.OFF_HAND
+                && action == RIGHT_CLICK_AIR
+                && mainHand.isEmpty();
+    }
+
+    /**
+     * Attempts to activate the ability on the given item.
+     *
+     * <p>The cooldown is applied only after the ability executed without
+     * throwing, so a failed execution does not burn the cooldown.
+     *
+     * @return the resulting state: EMPTY, COOLDOWN or FIRED
+     */
+    private ActivationResult tryActivate(Player player, ItemStack item) {
+        ActivationResult state = getState(item);
+        if (state.state() != State.READY) {
+            return state;
         }
 
         Ability ability = AbilityItem.read(item);
         if (ability == null) {
-            return false;
+            return ActivationResult.empty();
         }
 
-        // Item-specific cooldown: notify, but let the vanilla interaction go through
-        if (AbilityItem.isOnCooldown(item)) {
-            long remainingTicks = AbilityItem.getRemainingCooldownTicks(item);
-            double remainingSeconds = remainingTicks / 20.0;
-            ((Audience) player).sendMessage(Component.text(
-                    String.format("Ability is on cooldown! (%.1fs remaining)", remainingSeconds),
-                    NamedTextColor.RED
-            ));
-            return false;
-        }
-
-        // Global cast lock: silent, so rapid double-clicks don't spam messages
-        int now = Bukkit.getCurrentTick();
-        Integer last = lastCastTick.get(player.getUniqueId());
-        if (last != null && now - last < CAST_LOCK_TICKS) {
-            return false;
-        }
-
-        // Record the cast only on success so blocked clicks don't extend the lock
-        lastCastTick.put(player.getUniqueId(), now);
-
-        // Calculate and apply item cooldown directly to the held ItemStack
         long cooldownTicks = ability.calculateCooldown();
-        AbilityItem.applyCooldown(item, cooldownTicks);
 
         abilityEngine.execute(new AbilityContext(player, ability));
-        return true;
+        AbilityItem.applyCooldown(item, cooldownTicks);
+
+        return ActivationResult.fired();
     }
 
-    /** Clean up so the map doesn't leak entries for offline players. */
-    @EventHandler
-    public void onQuit(PlayerQuitEvent event) {
-        lastCastTick.remove(event.getPlayer().getUniqueId());
+    /**
+     * Reads the current state of an ability item without activating it.
+     */
+    private ActivationResult getState(ItemStack item) {
+        if (!AbilityItem.isAbilityItem(item)) {
+            return ActivationResult.empty();
+        }
+
+        if (AbilityItem.read(item) == null) {
+            return ActivationResult.empty();
+        }
+
+        if (AbilityItem.isOnCooldown(item)) {
+            return ActivationResult.cooldown(
+                    AbilityItem.getRemainingCooldownTicks(item)
+            );
+        }
+
+        return ActivationResult.ready();
+    }
+
+    /**
+     * Builds the compact action bar.
+     *
+     * <p>Off-hand is represented by "&lt;", main-hand by "&gt;". Only hands
+     * containing an ability item are rendered.
+     */
+    private void sendFeedback(
+            Player player,
+            ActivationResult offHand,
+            ActivationResult mainHand
+    ) {
+        boolean hasOffHand = offHand.present();
+        boolean hasMainHand = mainHand.present();
+
+        if (!hasOffHand && !hasMainHand) {
+            return;
+        }
+
+        Component message = Component.empty();
+
+        if (hasOffHand) {
+            message = message
+                    .append(Component.text("< ", NamedTextColor.GRAY))
+                    .append(offHand.toComponent());
+        }
+
+        if (hasOffHand && hasMainHand) {
+            message = message.append(Component.text(" | ", NamedTextColor.GRAY));
+        }
+
+        if (hasMainHand) {
+            message = message
+                    .append(mainHand.toComponent())
+                    .append(Component.text(" >", NamedTextColor.GRAY));
+        }
+
+        player.sendActionBar(message);
+    }
+
+    private record ActivationResult(State state, long remainingTicks) {
+
+        static ActivationResult empty() {
+            return new ActivationResult(State.EMPTY, 0);
+        }
+
+        static ActivationResult ready() {
+            return new ActivationResult(State.READY, 0);
+        }
+
+        static ActivationResult fired() {
+            return new ActivationResult(State.FIRED, 0);
+        }
+
+        static ActivationResult cooldown(long remainingTicks) {
+            return new ActivationResult(State.COOLDOWN, remainingTicks);
+        }
+
+        boolean fired() {
+            return state == State.FIRED;
+        }
+
+        boolean present() {
+            return state != State.EMPTY;
+        }
+
+        Component toComponent() {
+            return switch (state) {
+                case FIRED -> Component.text("Fired", NamedTextColor.GREEN);
+                case COOLDOWN -> Component.text(
+                        String.format(Locale.ROOT, "%.1fs", remainingTicks / 20.0),
+                        NamedTextColor.RED
+                );
+                case READY -> Component.text("Ready", NamedTextColor.YELLOW);
+                case EMPTY -> Component.empty();
+            };
+        }
+    }
+
+    private enum State {
+        EMPTY,
+        READY,
+        COOLDOWN,
+        FIRED
     }
 }
