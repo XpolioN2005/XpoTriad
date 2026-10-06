@@ -98,6 +98,7 @@ public final class Main extends JavaPlugin {
         ExplosionFragment explosion =
                 (ExplosionFragment) FragmentRegistry.get("explosion");
         MarkFragment mark = (MarkFragment) FragmentRegistry.get("mark");
+        HealFragment heal = (HealFragment) FragmentRegistry.get("heal");
 
         Ability ability = new Ability();
 
@@ -115,6 +116,7 @@ public final class Main extends JavaPlugin {
         player.getInventory().addItem(FragmentItem.create(speed));
         player.getInventory().addItem(FragmentItem.create(explosion));
         player.getInventory().addItem(FragmentItem.create(mark));
+        player.getInventory().addItem(FragmentItem.create(heal));
 
         return true;
     }

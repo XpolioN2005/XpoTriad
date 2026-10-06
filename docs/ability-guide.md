@@ -9,6 +9,7 @@ API specification for authoring abilities, fragments, fragment items, effects, r
 | Interface / Class      | Category       | Role                                                                                                                                   |
 | ---------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `Effect`               | Gameplay       | One-shot execution logic triggered during ability application.                                                                         |
+| `Ability`              | Gameplay       | Stage-to-fragment map (`PRE_CAST` / `CAST` / `POST_CAST`) with cooldown calculation from fragment modifiers.                            |
 | `Fragment`             | Gameplay       | Immutable definition of a gameplay unit executed per stage. Holds execution timing, lore, rarity, cooldown modifier, and its `Effect`. |
 | `FragmentItem`         | Items & PDC    | Factory and utility for generating physical fragment `ItemStack`s and reading fragment metadata.                                       |
 | `FragmentRegistry`     | Registry       | Global fragment lookup plus weighted rarity and fragment loot selection for registered loot tables.                                    |
@@ -42,6 +43,40 @@ public interface Effect {
 }
 ```
 
+### `Ability`
+
+```java
+package dev.xpolion.xpotriad.ability;
+
+import dev.xpolion.xpotriad.fragment.Fragment;
+
+public final class Ability {
+
+    public static final long BASE_COOLDOWN_TICKS = 20L;
+    public static final long MIN_COOLDOWN_TICKS = 0L;
+    public static final long MAX_COOLDOWN_TICKS = 300L;
+
+    public enum Stage {
+        PRE_CAST,
+        CAST,
+        POST_CAST
+    }
+
+    public Ability();
+
+    public void setFragment(Stage stage, Fragment fragment);
+
+    public Fragment getFragment(Stage stage);
+
+    // Sums BASE_COOLDOWN_TICKS with every assigned fragment's
+    // cooldown modifier, clamped to [MIN_COOLDOWN_TICKS, MAX_COOLDOWN_TICKS].
+    public long calculateCooldown();
+
+}
+```
+
+An `Ability` is a stage-to-fragment map. Unset stages are skipped during execution with no timing buffer.
+
 ### `Fragment`
 
 ```java
@@ -56,6 +91,11 @@ import org.bukkit.Material;
 import java.util.List;
 
 public abstract class Fragment {
+
+    public enum Type {
+        MELEE,
+        RANGED
+    }
 
     public enum Rarity {
 
@@ -74,6 +114,7 @@ public abstract class Fragment {
         List<String> lore,
         long executionTime,
         Rarity rarity,
+        Type type,
         long cooldownModifier,
         Effect effect
     );
@@ -86,6 +127,7 @@ public abstract class Fragment {
     public final boolean hasGlint(); // Always true
     public final long getExecutionTime();
     public final Rarity getRarity();
+    public final Type getType();
     public final long getCooldownModifier();
     public final Effect getEffect();
     public final void execute(AbilityContext context);
@@ -95,14 +137,21 @@ public abstract class Fragment {
 
 `Rarity` is part of the fragment definition and is also used by the loot system when selecting a fragment.
 
+`Type` classifies the fragment's execution style (`MELEE` or `RANGED`) and is rendered in the physical fragment item's lore (`Type: <MELEE|RANGED>`).
+
 ### `FragmentItem`
 
 ```java
 package dev.xpolion.xpotriad.fragment;
 
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public final class FragmentItem {
+
+    // Must be called during plugin startup before any other method.
+    // Initializes the PDC keys used to tag and read fragment items.
+    public static void initialize(JavaPlugin plugin);
 
     public static ItemStack create(Fragment fragment);
 
@@ -264,9 +313,20 @@ public interface RuntimeHandle {
 ```java
 package dev.xpolion.xpotriad.runtime;
 
+import org.bukkit.plugin.java.JavaPlugin;
+
 public final class RuntimeManager {
 
+    public RuntimeManager(JavaPlugin plugin);
+
+    // Starts the 1-tick scheduler loop that drives registered states.
+    // Must be called during plugin startup.
+    public void start();
+
     public RuntimeHandle start(RuntimeState state);
+
+    // Stops the scheduler loop and all active states.
+    public void stop();
 
 }
 ```
@@ -336,8 +396,15 @@ package dev.xpolion.xpotriad.particle;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public final class ParticleSystem {
+
+    public ParticleSystem(JavaPlugin plugin);
+
+    // Starts the 1-tick scheduler loop that drives persistent animations.
+    // Must be called during plugin startup.
+    public void start();
 
     // One-shot particle animation
     public void play(ParticleAnimation animation, Location origin);
@@ -364,6 +431,9 @@ public final class ParticleSystem {
         Entity entity,
         double durationSeconds
     );
+
+    // Stops the scheduler loop and all active persistent animations.
+    public void stop();
 
 }
 ```
@@ -587,6 +657,7 @@ public class EmpowerFragment extends Fragment {
             List.of(ChatColor.GRAY + "Grants a temporary fire aura."),
             10,
             Rarity.RARE,
+            Type.MELEE,
             5,
             new EmpowerEffect(
                 runtimeManager,
@@ -609,7 +680,7 @@ public class AbilityBuilderExample {
 
         player.getInventory().addItem(fragmentItem);
 
-        Ability ability = new Ability(Ability.WeaponType.MELEE);
+        Ability ability = new Ability();
 
         ability.setFragment(
             Ability.Stage.CAST,

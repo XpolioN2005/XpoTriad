@@ -7,6 +7,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.loot.LootTables;
 
 import dev.xpolion.xpotriad.fragment.fragments.ExplosionFragment;
+import dev.xpolion.xpotriad.fragment.fragments.HealFragment;
 import dev.xpolion.xpotriad.fragment.fragments.InvisibilityFragment;
 import dev.xpolion.xpotriad.fragment.fragments.MarkFragment;
 import dev.xpolion.xpotriad.fragment.fragments.SpeedFragment;
@@ -25,6 +26,9 @@ public final class FragmentRegistry {
         register(new InvisibilityFragment());
 
         register(new SpeedFragment())
+                .loot(LootTables.ANCIENT_CITY, 10);
+
+        register(new HealFragment())
                 .loot(LootTables.ANCIENT_CITY, 10);
 
         register(new ExplosionFragment())
