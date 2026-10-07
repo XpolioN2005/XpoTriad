@@ -29,9 +29,15 @@ import dev.xpolion.xpotriad.fragment.fragments.SpeedFragment;
  *
  * Defaults:
  *   chance   = 0.15
- *   rarities = COMMON 60 / UNCOMMON 25 / RARE 10 / EPIC 4 / LEGENDARY 1
+ *   rarities = COMMON 61 / UNCOMMON 25 / RARE 10 / EPIC 4
+ *              (LEGENDARY omitted = weight 0: default structures cannot
+ *              drop Legendary. Zero weight = omit the rarity key.)
+ *   maxDrops = MAX_FRAGMENTS_PER_INTERACTION (3)
  *
  * Within a selected rarity, fragments are picked uniformly (no weights).
+ *
+ * Per-source rule: maxDrops(key, n) caps fragments per loot interaction
+ * (used by boss sources to drop exactly one).
  */
 public final class FragmentRegistry {
 
@@ -43,11 +49,10 @@ public final class FragmentRegistry {
     private static final String CHEST_PREFIX = "chests/";
 
     private static final Map<Fragment.Rarity, Integer> DEFAULT_RARITIES = Map.of(
-            Fragment.Rarity.COMMON, 60,
+            Fragment.Rarity.COMMON, 61,
             Fragment.Rarity.UNCOMMON, 25,
             Fragment.Rarity.RARE, 10,
-            Fragment.Rarity.EPIC, 4,
-            Fragment.Rarity.LEGENDARY, 1
+            Fragment.Rarity.EPIC, 4
     );
 
     private static final Map<String, Fragment> FRAGMENTS = new HashMap<>();
@@ -65,63 +70,211 @@ public final class FragmentRegistry {
         register(new ExplosionFragment());
         register(new MarkFragment());
 
-        // --- Exact loot-table rules (real Paper 26.3 keys) ---
+        // ==================================================================
+        // STRUCTURE LOOT — all vanilla "chests/..." tables are eligible by
+        // default: chance = 15% (DEFAULT_CHANCE), rarities = 61/25/10/4
+        // (DEFAULT_RARITIES, no Legendary). Rows below override that.
+        // ==================================================================
 
-        rarities("chests/ancient_city", Map.of(
-                Fragment.Rarity.COMMON, 45,
-                Fragment.Rarity.UNCOMMON, 30,
-                Fragment.Rarity.RARE, 15,
-                Fragment.Rarity.EPIC, 7,
-                Fragment.Rarity.LEGENDARY, 3
-        ));
-        chance("chests/ancient_city", 0.15);
-
-        rarities("chests/woodland_mansion", Map.of(
-                Fragment.Rarity.COMMON, 50,
-                Fragment.Rarity.UNCOMMON, 25,
-                Fragment.Rarity.RARE, 15,
-                Fragment.Rarity.EPIC, 7,
-                Fragment.Rarity.LEGENDARY, 3
-        ));
-
-        rarities("chests/nether_bridge", Map.of(
-                Fragment.Rarity.COMMON, 55,
-                Fragment.Rarity.UNCOMMON, 25,
-                Fragment.Rarity.RARE, 12,
-                Fragment.Rarity.EPIC, 5,
-                Fragment.Rarity.LEGENDARY, 3
-        ));
-
-        // --- Prefix rules: one line covers a whole key group ---
-        // Vanilla bastion keys are "chests/bastion_*" (underscore), so the
-        // prefix rule uses '_' to match them all.
-        rarities("chests/bastion_", Map.of(
-                Fragment.Rarity.COMMON, 45,
-                Fragment.Rarity.UNCOMMON, 25,
-                Fragment.Rarity.RARE, 15,
-                Fragment.Rarity.EPIC, 10,
-                Fragment.Rarity.LEGENDARY, 5
-        ));
-
-        rarities("chests/trial_chambers/", Map.of(
-                Fragment.Rarity.COMMON, 50,
-                Fragment.Rarity.UNCOMMON, 25,
-                Fragment.Rarity.RARE, 15,
-                Fragment.Rarity.EPIC, 7,
-                Fragment.Rarity.LEGENDARY, 3
-        ));
-
+        // Village — 15% | 55/30/10/4/1  (prefix covers all 16 chests/village/*)
+        chance("chests/village/", 0.15);
         rarities("chests/village/", Map.of(
-                Fragment.Rarity.COMMON, 70,
-                Fragment.Rarity.UNCOMMON, 20,
-                Fragment.Rarity.RARE, 7,
-                Fragment.Rarity.EPIC, 2,
+                Fragment.Rarity.COMMON, 55,
+                Fragment.Rarity.UNCOMMON, 30,
+                Fragment.Rarity.RARE, 10,
+                Fragment.Rarity.EPIC, 4,
                 Fragment.Rarity.LEGENDARY, 1
         ));
 
-        // --- Entity sources are opt-in; without a rule they never drop ---
-        // Example (commented out):
-        // chance("entities/", 0.01);
+        // Nether Fortress — 20% | 45/30/15/8/2
+        chance("chests/nether_bridge", 0.20);
+        rarities("chests/nether_bridge", Map.of(
+                Fragment.Rarity.COMMON, 45,
+                Fragment.Rarity.UNCOMMON, 30,
+                Fragment.Rarity.RARE, 15,
+                Fragment.Rarity.EPIC, 8,
+                Fragment.Rarity.LEGENDARY, 2
+        ));
+
+        // Woodland Mansion — 25% | 30/25/20/22/3
+        chance("chests/woodland_mansion", 0.25);
+        rarities("chests/woodland_mansion", Map.of(
+                Fragment.Rarity.COMMON, 30,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 20,
+                Fragment.Rarity.EPIC, 22,
+                Fragment.Rarity.LEGENDARY, 3
+        ));
+
+        // Trial Chambers — 25% | 30/25/20/22/3  (prefix covers all 21 keys)
+        chance("chests/trial_chambers/", 0.25);
+        rarities("chests/trial_chambers/", Map.of(
+                Fragment.Rarity.COMMON, 30,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 20,
+                Fragment.Rarity.EPIC, 22,
+                Fragment.Rarity.LEGENDARY, 3
+        ));
+
+        // Bastion — 30% | 30/25/25/15/5  (prefix: vanilla keys are bastion_*)
+        chance("chests/bastion_", 0.30);
+        rarities("chests/bastion_", Map.of(
+                Fragment.Rarity.COMMON, 30,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 25,
+                Fragment.Rarity.EPIC, 15,
+                Fragment.Rarity.LEGENDARY, 5
+        ));
+
+        // End City — 35% | 20/20/33/20/7
+        chance("chests/end_city_treasure", 0.35);
+        rarities("chests/end_city_treasure", Map.of(
+                Fragment.Rarity.COMMON, 20,
+                Fragment.Rarity.UNCOMMON, 20,
+                Fragment.Rarity.RARE, 33,
+                Fragment.Rarity.EPIC, 20,
+                Fragment.Rarity.LEGENDARY, 7
+        ));
+
+        // Ancient City — 40% | 15/15/30/30/10  (ice box is part of the structure)
+        chance("chests/ancient_city", 0.40);
+        rarities("chests/ancient_city", Map.of(
+                Fragment.Rarity.COMMON, 15,
+                Fragment.Rarity.UNCOMMON, 15,
+                Fragment.Rarity.RARE, 30,
+                Fragment.Rarity.EPIC, 30,
+                Fragment.Rarity.LEGENDARY, 10
+        ));
+        chance("chests/ancient_city_ice_box", 0.40);
+        rarities("chests/ancient_city_ice_box", Map.of(
+                Fragment.Rarity.COMMON, 15,
+                Fragment.Rarity.UNCOMMON, 15,
+                Fragment.Rarity.RARE, 30,
+                Fragment.Rarity.EPIC, 30,
+                Fragment.Rarity.LEGENDARY, 10
+        ));
+
+        // ==================================================================
+        // MOB LOOT — opt-in: every listed rule makes that entity eligible,
+        // all unlisted mobs (incl. Ghast, Piglin, Zombified Piglin) stay out.
+        // ==================================================================
+
+        // Bosses — 100%, exactly one Legendary (Rule 6)
+        chance("entities/warden", 1.0);
+        rarities("entities/warden", Map.of(Fragment.Rarity.LEGENDARY, 100));
+        maxDrops("entities/warden", 1);
+
+        chance("entities/ender_dragon", 1.0);
+        rarities("entities/ender_dragon", Map.of(Fragment.Rarity.LEGENDARY, 100));
+        maxDrops("entities/ender_dragon", 1);
+
+        chance("entities/wither", 1.0);
+        rarities("entities/wither", Map.of(Fragment.Rarity.LEGENDARY, 100));
+        maxDrops("entities/wither", 1);
+
+        // Rare mobs
+        chance("entities/ravager", 0.35);
+        rarities("entities/ravager", Map.of(
+                Fragment.Rarity.COMMON, 10,
+                Fragment.Rarity.UNCOMMON, 20,
+                Fragment.Rarity.RARE, 25,
+                Fragment.Rarity.EPIC, 40,
+                Fragment.Rarity.LEGENDARY, 5
+        ));
+
+        chance("entities/evoker", 0.35);
+        rarities("entities/evoker", Map.of(
+                Fragment.Rarity.COMMON, 10,
+                Fragment.Rarity.UNCOMMON, 20,
+                Fragment.Rarity.RARE, 25,
+                Fragment.Rarity.EPIC, 40,
+                Fragment.Rarity.LEGENDARY, 5
+        ));
+
+        chance("entities/elder_guardian", 0.25);
+        rarities("entities/elder_guardian", Map.of(
+                Fragment.Rarity.COMMON, 5,
+                Fragment.Rarity.UNCOMMON, 20,
+                Fragment.Rarity.RARE, 45,
+                Fragment.Rarity.EPIC, 25,
+                Fragment.Rarity.LEGENDARY, 5
+        ));
+
+        chance("entities/piglin_brute", 0.20);
+        rarities("entities/piglin_brute", Map.of(
+                Fragment.Rarity.COMMON, 5,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 50,
+                Fragment.Rarity.EPIC, 18,
+                Fragment.Rarity.LEGENDARY, 2
+        ));
+
+        chance("entities/shulker", 0.15);
+        rarities("entities/shulker", Map.of(
+                Fragment.Rarity.COMMON, 5,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 50,
+                Fragment.Rarity.EPIC, 18,
+                Fragment.Rarity.LEGENDARY, 2
+        ));
+
+        chance("entities/blaze", 0.12);
+        rarities("entities/blaze", Map.of(
+                Fragment.Rarity.COMMON, 5,
+                Fragment.Rarity.UNCOMMON, 30,
+                Fragment.Rarity.RARE, 45,
+                Fragment.Rarity.EPIC, 18,
+                Fragment.Rarity.LEGENDARY, 2
+        ));
+
+        chance("entities/wither_skeleton", 0.15);
+        rarities("entities/wither_skeleton", Map.of(
+                Fragment.Rarity.COMMON, 5,
+                Fragment.Rarity.UNCOMMON, 30,
+                Fragment.Rarity.RARE, 45,
+                Fragment.Rarity.EPIC, 18,
+                Fragment.Rarity.LEGENDARY, 2
+        ));
+
+        chance("entities/pillager", 0.08);
+        rarities("entities/pillager", Map.of(
+                Fragment.Rarity.COMMON, 5,
+                Fragment.Rarity.UNCOMMON, 50,
+                Fragment.Rarity.RARE, 35,
+                Fragment.Rarity.EPIC, 9,
+                Fragment.Rarity.LEGENDARY, 1
+        ));
+
+        chance("entities/vindicator", 0.10);
+        rarities("entities/vindicator", Map.of(
+                Fragment.Rarity.COMMON, 5,
+                Fragment.Rarity.UNCOMMON, 40,
+                Fragment.Rarity.RARE, 40,
+                Fragment.Rarity.EPIC, 14,
+                Fragment.Rarity.LEGENDARY, 1
+        ));
+
+        // Common hostiles — 0.5% | 70/25/5 (Rule 9; no Epic/Legendary)
+        chance("entities/zombie", 0.005);
+        rarities("entities/zombie", Map.of(
+                Fragment.Rarity.COMMON, 70,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 5
+        ));
+
+        chance("entities/skeleton", 0.005);
+        rarities("entities/skeleton", Map.of(
+                Fragment.Rarity.COMMON, 70,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 5
+        ));
+
+        chance("entities/creeper", 0.005);
+        rarities("entities/creeper", Map.of(
+                Fragment.Rarity.COMMON, 70,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 5
+        ));
     }
 
     private FragmentRegistry() {
@@ -145,6 +298,45 @@ public final class FragmentRegistry {
         SourceRule exact = EXACT_RULES.get(source.key());
         SourceRule prefix = matchPrefix(source.key());
 
+        return rollOnce(source, exact, prefix);
+    }
+
+    /**
+     * Rolls up to {@code max} fragments for the given source, stopping at
+     * the first failed roll (chance miss, ineligible source, or empty
+     * rarity pool). A per-source maxDrops rule can lower (not raise) the
+     * cap. Duplicates are allowed.
+     */
+    public static List<Fragment> roll(LootSource source, int max) {
+        if (max < 0) {
+            throw new IllegalArgumentException("Max cannot be negative");
+        }
+
+        SourceRule exact = EXACT_RULES.get(source.key());
+        SourceRule prefix = matchPrefix(source.key());
+
+        int limit = Math.min(max, resolveMaxDrops(exact, prefix));
+
+        List<Fragment> drops = new ArrayList<>();
+
+        for (int i = 0; i < limit; i++) {
+            Fragment fragment = rollOnce(source, exact, prefix);
+
+            if (fragment == null) {
+                break;
+            }
+
+            drops.add(fragment);
+        }
+
+        return drops;
+    }
+
+    private static Fragment rollOnce(
+            LootSource source,
+            SourceRule exact,
+            SourceRule prefix
+    ) {
         if (exact == null && prefix == null && !source.key().startsWith(CHEST_PREFIX)) {
             return null; // not eligible (opt-in source without rules)
         }
@@ -162,31 +354,6 @@ public final class FragmentRegistry {
         }
 
         return rollFragment(rarity);
-    }
-
-    /**
-     * Rolls up to {@code max} fragments for the given source, stopping at
-     * the first failed roll (chance miss, ineligible source, or empty
-     * rarity pool). Duplicates are allowed.
-     */
-    public static List<Fragment> roll(LootSource source, int max) {
-        if (max < 0) {
-            throw new IllegalArgumentException("Max cannot be negative");
-        }
-
-        List<Fragment> drops = new ArrayList<>();
-
-        for (int i = 0; i < max; i++) {
-            Fragment fragment = roll(source);
-
-            if (fragment == null) {
-                break;
-            }
-
-            drops.add(fragment);
-        }
-
-        return drops;
     }
 
     private static Fragment.Rarity rollRarity(Map<Fragment.Rarity, Integer> rarities) {
@@ -282,6 +449,18 @@ public final class FragmentRegistry {
         ruleFor(key).rarities = validated;
     }
 
+    /**
+     * Caps how many fragments can drop from one interaction for a source key.
+     * Key ends with '/' or '_'  -> prefix rule, otherwise exact rule.
+     */
+    private static void maxDrops(String key, int max) {
+        if (max < 1) {
+            throw new IllegalArgumentException("Max drops must be at least 1");
+        }
+
+        ruleFor(key).maxDrops = max;
+    }
+
     private static SourceRule ruleFor(String key) {
         if (key == null || key.isBlank()) {
             throw new IllegalArgumentException("Source key cannot be null or blank");
@@ -344,9 +523,22 @@ public final class FragmentRegistry {
         return DEFAULT_RARITIES;
     }
 
+    private static int resolveMaxDrops(SourceRule exact, SourceRule prefix) {
+        if (exact != null && exact.maxDrops != null) {
+            return exact.maxDrops;
+        }
+
+        if (prefix != null && prefix.maxDrops != null) {
+            return prefix.maxDrops;
+        }
+
+        return MAX_FRAGMENTS_PER_INTERACTION;
+    }
+
     private static final class SourceRule {
 
         private Double chance;
         private Map<Fragment.Rarity, Integer> rarities;
+        private Integer maxDrops;
     }
 }

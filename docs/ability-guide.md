@@ -12,8 +12,9 @@ API specification for authoring abilities, fragments, fragment items, effects, r
 | `Ability`              | Gameplay       | Stage-to-fragment map (`PRE_CAST` / `CAST` / `POST_CAST`) with cooldown calculation from fragment modifiers.                            |
 | `Fragment`             | Gameplay       | Immutable definition of a gameplay unit executed per stage. Holds execution timing, lore, rarity, cooldown modifier, and its `Effect`. |
 | `FragmentItem`         | Items & PDC    | Factory and utility for generating physical fragment `ItemStack`s and reading fragment metadata.                                       |
-| `FragmentRegistry`     | Registry       | Global fragment lookup plus weighted rarity and fragment loot selection for registered loot tables.                                    |
-| `FragmentLootListener` | Loot           | Injects a rolled fragment item into supported generated loot according to the configured table chance.                                 |
+| `LootSource`           | Gameplay       | Generic loot-source descriptor (`Type` + key) independent of the event that produced it.                                               |
+| `FragmentRegistry`     | Registry       | Global fragment lookup plus source-rule loot rolling (spawn chance → rarity → uniform fragment) for multi-source drops.               |
+| `FragmentLootListener` | Loot           | Translates loot events (chests, dispensed loot, mob deaths) into `LootSource`s and injects rolled fragment items.                     |
 | `AbilityContext`       | Gameplay       | Context container providing the execution source (`Player`) and ability information.                                                   |
 | `AbilityListener`      | Gameplay       | Handles right-click activation, cooldown checks, ability execution, and action-bar feedback.                                           |
 | `RuntimeState`         | Gameplay       | Persistent gameplay condition surviving beyond the initial `Effect.apply()`.                                                           |
@@ -169,61 +170,130 @@ public final class FragmentItem {
 ```java
 package dev.xpolion.xpotriad.fragment;
 
-import org.bukkit.loot.LootTables;
+import java.util.List;
 
 public final class FragmentRegistry {
 
+    /** Maximum fragments that can drop from a single loot interaction. */
+    public static final int MAX_FRAGMENTS_PER_INTERACTION = 3;
+
     public static Fragment get(String id);
 
-    public static Fragment rollLoot(LootTables lootTable);
+    public static Fragment roll(LootSource source);
+
+    public static List<Fragment> roll(LootSource source, int max);
 
 }
 ```
 
-`FragmentRegistry` owns fragment definitions and weighted loot configuration.
+`FragmentRegistry` owns fragment definitions and ALL fragment loot logic.
 
-Loot selection is performed in two stages:
+Loot flow (single entry point):
 
-1. Roll a `Fragment.Rarity` using the rarity weights configured for the loot table.
-2. Roll a fragment from that loot table whose `Fragment.getRarity()` matches the selected rarity.
+```text
+resolve source config (exact -> prefix -> defaults)
+      |
+      v
+spawn chance roll
+      |
+      v
+weighted rarity roll
+      |
+      v
+uniform fragment of that rarity (no fragment weights)
+```
 
-If the selected rarity has no registered fragments for that loot table, no fragment is returned.
+If the chance roll fails, the source is ineligible, or the rolled rarity has no registered fragments, no fragment is returned.
+
+Eligibility:
+
+- Every `chests/...` loot-table key is eligible by default.
+- All other sources (entities, non-chest dispensed loot) are opt-in: they require at least one exact or prefix rule.
 
 #### Fragment registration
 
-Fragments can be registered with loot entries through the compact chained API:
+Fragments are registered by id (duplicate ids throw):
 
 ```java
-register(new SpeedFragment())
-    .loot(LootTables.ANCIENT_CITY, 10);
-
-register(new ExplosionFragment())
-    .loot(LootTables.ANCIENT_CITY, 5);
-
-register(new MarkFragment())
-    .loot(LootTables.ANCIENT_CITY, 2)
-    .loot(LootTables.ANCIENT_CITY_ICE_BOX, 5);
+register(new SpeedFragment());
+register(new ExplosionFragment());
+register(new MarkFragment());
 ```
 
-The registry stores the fragment by its ID and returns a registration entry so loot configuration can be chained.
+Registering makes a fragment part of every rarity pool it belongs to. There are no per-fragment loot weights — within a selected rarity every registered fragment of that rarity is equally likely.
 
-#### Rarity registration
+#### Source rules (compact config API)
 
-Rarity weights are configured separately:
+Rules are declared in the static block through three private helpers:
 
 ```java
-rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.COMMON, 60);
-rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.UNCOMMON, 25);
-rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.RARE, 10);
-rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.EPIC, 4);
-rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.LEGENDARY, 1);
+chance("chests/ancient_city", 0.40);           // spawn chance, 0.0 - 1.0
+rarities("chests/ancient_city", Map.of(...));   // rarity weights
+maxDrops("entities/warden", 1);                 // per-source drop cap
 ```
 
-Weights are relative, not fixed percentages. A total weight of `100` with values `60, 25, 10, 4, 1` corresponds to 60%, 25%, 10%, 4%, and 1%.
+Key convention: a key ending with `/` or `_` is a **prefix rule** (matched by `startsWith`, longest match wins); any other key is an **exact rule**. Exact rules take priority over prefix rules (per field: exact value, else prefix value, else default).
 
-Fragment loot weights are likewise relative within the selected rarity.
+Defaults when no rule matches:
 
-Both rarity weights and fragment loot weights must be positive.
+| Setting  | Default                                      |
+| -------- | -------------------------------------------- |
+| chance   | `0.15`                                       |
+| rarities | `COMMON 61 / UNCOMMON 25 / RARE 10 / EPIC 4` |
+| maxDrops | `MAX_FRAGMENTS_PER_INTERACTION` (3)          |
+
+LEGENDARY is omitted from the default rarities (= weight 0): default/common structures cannot drop Legendary. Zero weight = omit the rarity key; explicit weights must be positive.
+
+#### Multi-drop behavior
+
+`roll(source, max)` calls the single roll up to `max` times and **stops at the first miss** (chance failure, ineligible source, or empty rarity pool). Duplicates are allowed. A per-source `maxDrops` rule can lower — never raise — the cap:
+
+```java
+int limit = Math.min(max, resolveMaxDrops(exact, prefix));
+```
+
+Boss sources use this to drop exactly one fragment:
+
+```java
+chance("entities/warden", 1.0);
+rarities("entities/warden", Map.of(Fragment.Rarity.LEGENDARY, 100));
+maxDrops("entities/warden", 1);
+```
+
+Rarity weights are relative, not fixed percentages: a total of `100` with values `61, 25, 10, 4` corresponds to 61%, 25%, 10%, 4%.
+
+### `LootSource`
+
+```java
+package dev.xpolion.xpotriad.fragment;
+
+import org.bukkit.entity.EntityType;
+import org.bukkit.loot.LootTable;
+
+public record LootSource(Type type, String key) {
+
+    public enum Type {
+        LOOT_TABLE,
+        DISPENSE_LOOT,
+        ENTITY
+    }
+
+    public static LootSource lootTable(LootTable table);
+
+    public static LootSource dispensedLoot(LootTable table);
+
+    public static LootSource entity(EntityType entityType);
+
+}
+```
+
+Generic representation of a loot source, independent of the event that produced it.
+
+Key conventions (vanilla `minecraft:` namespace is stripped):
+
+- `LOOT_TABLE` / `DISPENSE_LOOT` → actual loot-table key, e.g. `chests/ancient_city`.
+- `ENTITY` → `entities/<entity id>`, e.g. `entities/zombie`.
+- Non-vanilla namespaces are kept as-is (e.g. `mypack:chests/loot`).
 
 ### `FragmentLootListener`
 
@@ -232,42 +302,43 @@ package dev.xpolion.xpotriad.fragment;
 
 public final class FragmentLootListener implements Listener {
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onLootGenerate(LootGenerateEvent event);
+
+    @EventHandler(ignoreCancelled = true)
+    public void onDispenseLoot(BlockDispenseLootEvent event);
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityDeath(EntityDeathEvent event);
 
 }
 ```
 
-`FragmentLootListener` hooks into `LootGenerateEvent` and injects a fragment item into supported generated loot.
+The listener only translates Minecraft events into `LootSource` values and passes them to `FragmentRegistry` — it contains NO chance or rarity logic.
+
+- `onLootGenerate` → `LootSource.lootTable(...)` → adds drops to `event.getLoot()` (chests, barrels, minecarts — `LootGenerateEvent` does not fire for entity or fishing loot).
+- `onDispenseLoot` → `LootSource.dispensedLoot(...)` → adds drops to `event.getDispensedLoot()` (e.g. trial chamber vaults).
+- `onEntityDeath` → `LootSource.entity(...)` → adds drops to `event.getDrops()`; requires a player killer (mob-vs-mob deaths are ignored).
 
 The flow is:
 
 ```text
-LootGenerateEvent
+Loot event (chests / dispense / mob death)
       |
       v
-Resolve LootTables
+Translate to LootSource
       |
       v
-Check table drop chance
+FragmentRegistry.roll(source, MAX_FRAGMENTS_PER_INTERACTION)
       |
       v
-FragmentRegistry.rollLoot(...)
+FragmentItem.create(...) for each rolled fragment
       |
       v
-FragmentItem.create(...)
-      |
-      v
-Add to generated loot
+Add to the event's loot / drops list
 ```
 
-The current implementation defines:
-
-```java
-private static final double ANCIENT_CITY_CHANCE = 0.15;
-```
-
-Unsupported loot tables currently have a chance of `0.0`.
+All chance, rarity, and max-drop values live in `FragmentRegistry` configuration.
 
 The listener is registered during plugin startup:
 
@@ -704,47 +775,70 @@ public class AbilityBuilderExample {
 
 ## 5. Fragment Loot Configuration
 
-Fragment loot has two independent configuration layers.
+Fragment loot is driven by source rules in `FragmentRegistry`. Roll order:
 
-### 5.1 Loot-table rarity weights
+1. Resolve rules for the source key (exact → prefix → defaults).
+2. Roll the fragment spawn chance. On a miss, return nothing.
+3. Roll the rarity using the resolved weights.
+4. Select a registered fragment of that rarity uniformly at random (no fragment-level weights).
+5. Repeat up to the resolved max-drop cap, stopping at the first miss.
 
-These weights decide which rarity is selected first:
-
-```java
-rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.COMMON, 60);
-rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.UNCOMMON, 25);
-rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.RARE, 10);
-rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.EPIC, 4);
-rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.LEGENDARY, 1);
-```
-
-### 5.2 Fragment weights
-
-These weights decide which fragment is selected after the rarity is known:
+### 5.1 Source rules
 
 ```java
-register(new SpeedFragment())
-    .loot(LootTables.ANCIENT_CITY, 10);
+// exact key (no trailing '/' or '_')
+chance("chests/ancient_city", 0.40);
+rarities("chests/ancient_city", Map.of(...));
 
-register(new ExplosionFragment())
-    .loot(LootTables.ANCIENT_CITY, 5);
+// prefix key (trailing '/' or '_') — covers a whole group
+rarities("chests/trial_chambers/", Map.of(...));
+chance("chests/bastion_", 0.30);
 
-register(new MarkFragment())
-    .loot(LootTables.ANCIENT_CITY, 2)
-    .loot(LootTables.ANCIENT_CITY_ICE_BOX, 5);
+// per-source drop cap (bosses: exactly one)
+maxDrops("entities/warden", 1);
 ```
 
-A fragment's own `Rarity` determines which rarity bucket it belongs to. The `.loot(...)` weight controls its relative chance among fragments of that rarity.
+### 5.2 Eligibility and current configuration
 
-Registering a fragment does not automatically make it obtainable from loot. It must also be attached to a loot table with `.loot(...)`.
+Every vanilla `chests/...` table is eligible by default (15% chance, `61/25/10/4`, no Legendary). Non-chest sources are opt-in — each rule below also makes its source eligible. Unlisted mobs (including Ghast, Piglin, and Zombified Piglin) never drop fragments.
 
-The current registry configuration contains:
+#### Structure loot
 
-- `SpeedFragment` in `ANCIENT_CITY` with weight `10`.
-- `ExplosionFragment` in `ANCIENT_CITY` with weight `5`.
-- `MarkFragment` in `ANCIENT_CITY` with weight `2`.
-- `MarkFragment` in `ANCIENT_CITY_ICE_BOX` with weight `5`.
-- `ANCIENT_CITY` rarity weights of `60 / 25 / 10 / 4 / 1` for `COMMON / UNCOMMON / RARE / EPIC / LEGENDARY`.
+| Source | Key rule | Chance | COMMON | UNCOMMON | RARE | EPIC | LEGENDARY |
+| ------ | -------- | ------ | ------ | -------- | ---- | ---- | --------- |
+| Default structures | *(defaults)* | 15% | 61 | 25 | 10 | 4 | 0 |
+| Village | `chests/village/` (prefix) | 15% | 55 | 30 | 10 | 4 | 1 |
+| Nether Fortress | `chests/nether_bridge` | 20% | 45 | 30 | 15 | 8 | 2 |
+| Woodland Mansion | `chests/woodland_mansion` | 25% | 30 | 25 | 20 | 22 | 3 |
+| Trial Chambers | `chests/trial_chambers/` (prefix) | 25% | 30 | 25 | 20 | 22 | 3 |
+| Bastion | `chests/bastion_` (prefix) | 30% | 30 | 25 | 25 | 15 | 5 |
+| End City | `chests/end_city_treasure` | 35% | 20 | 20 | 33 | 20 | 7 |
+| Ancient City | `chests/ancient_city` + `chests/ancient_city_ice_box` | 40% | 15 | 15 | 30 | 30 | 10 |
+
+#### Mob loot
+
+| Mob | Key | Chance | COMMON | UNCOMMON | RARE | EPIC | LEGENDARY |
+| --- | --- | ------ | ------ | -------- | ---- | ---- | --------- |
+| Warden / Ender Dragon / Wither | `entities/warden`, `entities/ender_dragon`, `entities/wither` | 100% | 0 | 0 | 0 | 0 | 100 |
+| Ravager | `entities/ravager` | 35% | 10 | 20 | 25 | 40 | 5 |
+| Evoker | `entities/evoker` | 35% | 10 | 20 | 25 | 40 | 5 |
+| Elder Guardian | `entities/elder_guardian` | 25% | 5 | 20 | 45 | 25 | 5 |
+| Piglin Brute | `entities/piglin_brute` | 20% | 5 | 25 | 50 | 18 | 2 |
+| Shulker | `entities/shulker` | 15% | 5 | 25 | 50 | 18 | 2 |
+| Blaze | `entities/blaze` | 12% | 5 | 30 | 45 | 18 | 2 |
+| Wither Skeleton | `entities/wither_skeleton` | 15% | 5 | 30 | 45 | 18 | 2 |
+| Pillager | `entities/pillager` | 8% | 5 | 50 | 35 | 9 | 1 |
+| Vindicator | `entities/vindicator` | 10% | 5 | 40 | 40 | 14 | 1 |
+| Zombie | `entities/zombie` | 0.5% | 70 | 25 | 5 | 0 | 0 |
+| Skeleton | `entities/skeleton` | 0.5% | 70 | 25 | 5 | 0 | 0 |
+| Creeper | `entities/creeper` | 0.5% | 70 | 25 | 5 | 0 | 0 |
+
+Notes:
+
+- Weights are relative and do not need to sum to 100; every configured row above sums to 100.
+- Legendary is capped at 10% for normal weight-ratio sources; bosses are exempt and always drop exactly one Legendary fragment (`maxDrops 1`).
+- Zero values are expressed by omitting the rarity key in code (e.g. default structures simply have no `LEGENDARY` entry).
+- Rarity progression: rarer/harder structures get higher fragment chances (15% → 40%).
 
 ---
 
@@ -767,14 +861,15 @@ Main
  +-- FragmentRegistry
  |     |
  |     +-- Fragment definitions
- |     +-- Rarity weights
- |     +-- Fragment loot weights
+ |     +-- Source rules (chance, rarities, maxDrops)
  |
  +-- FragmentLootListener
        |
        +-- LootGenerateEvent
-       +-- Table chance
-       +-- rollLoot(...)
+       +-- BlockDispenseLootEvent
+       +-- EntityDeathEvent
+       +-- Translate -> LootSource
+       +-- roll(source, MAX_FRAGMENTS_PER_INTERACTION)
        +-- FragmentItem.create(...)
 ```
 
@@ -820,25 +915,27 @@ Effect.apply(...)
 ### Fragment acquisition
 
 ```text
-LootGenerateEvent
+Loot event (chests / dispense / mob death)
         |
         v
 FragmentLootListener
         |
-        +-- Check loot-table chance
+        +-- Translate event -> LootSource
         |
         v
-FragmentRegistry.rollLoot(...)
+FragmentRegistry.roll(source, 3)
         |
-        +-- Roll rarity
-        |
-        +-- Roll matching fragment
+        +-- Eligibility (chests by default, others opt-in)
+        +-- Spawn chance
+        +-- Roll rarity (weighted)
+        +-- Uniform fragment of that rarity
+        +-- Repeat up to max drops (stop at first miss)
         |
         v
-FragmentItem.create(...)
+FragmentItem.create(...) per drop
         |
         v
-Generated loot
+Generated loot / drops
 ```
 
 The loot system determines how fragments enter the game. The ability system determines how those fragments behave after being engraved into an ability.
