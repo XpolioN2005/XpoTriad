@@ -1,6 +1,9 @@
 package dev.xpolion.xpotriad.fragment;
 
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -16,55 +19,34 @@ public final class FragmentRegistry {
 
     private static final Map<String, Fragment> FRAGMENTS = new HashMap<>();
 
-    private static final Map<LootTables, Map<Fragment.Rarity, Integer>> RARITY_LOOT =
-            new HashMap<>();
+    private static final Map<Fragment.Rarity, Integer> DEFAULT_RARITIES = Map.of(
+            Fragment.Rarity.COMMON, 60,
+            Fragment.Rarity.UNCOMMON, 25,
+            Fragment.Rarity.RARE, 10,
+            Fragment.Rarity.EPIC, 4,
+            Fragment.Rarity.LEGENDARY, 1
+    );
 
-    private static final Map<LootTables, Map<String, Integer>> FRAGMENT_LOOT =
+    private static final Map<LootTables, Map<Fragment.Rarity, Integer>> LOOT_RARITIES =
             new HashMap<>();
 
     static {
         register(new InvisibilityFragment());
+        register(new SpeedFragment());
+        register(new HealFragment());
+        register(new ExplosionFragment());
+        register(new MarkFragment());
 
-        register(new SpeedFragment())
-                .loot(LootTables.ANCIENT_CITY, 10);
-
-        register(new HealFragment())
-                .loot(LootTables.ANCIENT_CITY, 10);
-
-        register(new ExplosionFragment())
-                .loot(LootTables.ANCIENT_CITY, 5);
-
-        register(new MarkFragment())
-                .loot(LootTables.ANCIENT_CITY, 2)
-                .loot(LootTables.ANCIENT_CITY_ICE_BOX, 5);
-
-        rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.COMMON, 60);
-        rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.UNCOMMON, 25);
-        rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.RARE, 10);
-        rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.EPIC, 4);
-        rarity(LootTables.ANCIENT_CITY, Fragment.Rarity.LEGENDARY, 1);
+        rarities(LootTables.ANCIENT_CITY, Map.of(
+                Fragment.Rarity.COMMON, 45,
+                Fragment.Rarity.UNCOMMON, 30,
+                Fragment.Rarity.RARE, 15,
+                Fragment.Rarity.EPIC, 7,
+                Fragment.Rarity.LEGENDARY, 3
+        ));
     }
 
     private FragmentRegistry() {
-    }
-
-    private static FragmentEntry register(Fragment fragment) {
-        FRAGMENTS.put(fragment.getId(), fragment);
-        return new FragmentEntry(fragment);
-    }
-
-    private static void rarity(
-            LootTables lootTable,
-            Fragment.Rarity rarity,
-            int weight
-    ) {
-        if (weight <= 0) {
-            throw new IllegalArgumentException("Rarity weight must be positive");
-        }
-
-        RARITY_LOOT
-                .computeIfAbsent(lootTable, key -> new HashMap<>())
-                .put(rarity, weight);
     }
 
     public static Fragment get(String id) {
@@ -78,25 +60,26 @@ public final class FragmentRegistry {
             return null;
         }
 
-        return rollFragment(lootTable, rarity);
+        return rollFragment(rarity);
     }
 
     private static Fragment.Rarity rollRarity(LootTables lootTable) {
-        Map<Fragment.Rarity, Integer> entries = RARITY_LOOT.get(lootTable);
-
-        if (entries == null || entries.isEmpty()) {
-            return null;
-        }
+        Map<Fragment.Rarity, Integer> rarities =
+                LOOT_RARITIES.getOrDefault(lootTable, DEFAULT_RARITIES);
 
         int totalWeight = 0;
 
-        for (int weight : entries.values()) {
+        for (int weight : rarities.values()) {
             totalWeight += weight;
+        }
+
+        if (totalWeight <= 0) {
+            return null;
         }
 
         int roll = ThreadLocalRandom.current().nextInt(totalWeight);
 
-        for (Map.Entry<Fragment.Rarity, Integer> entry : entries.entrySet()) {
+        for (Map.Entry<Fragment.Rarity, Integer> entry : rarities.entrySet()) {
             roll -= entry.getValue();
 
             if (roll < 0) {
@@ -107,72 +90,55 @@ public final class FragmentRegistry {
         return null;
     }
 
-    private static Fragment rollFragment(
-            LootTables lootTable,
-            Fragment.Rarity rarity
-    ) {
-        Map<String, Integer> entries = FRAGMENT_LOOT.get(lootTable);
+    private static Fragment rollFragment(Fragment.Rarity rarity) {
+        List<Fragment> pool = new ArrayList<>();
 
-        if (entries == null || entries.isEmpty()) {
+        for (Fragment fragment : FRAGMENTS.values()) {
+            if (fragment.getRarity() == rarity) {
+                pool.add(fragment);
+            }
+        }
+
+        if (pool.isEmpty()) {
             return null;
         }
 
-        int totalWeight = 0;
-
-        for (Map.Entry<String, Integer> entry : entries.entrySet()) {
-            Fragment fragment = FRAGMENTS.get(entry.getKey());
-
-            if (fragment != null && fragment.getRarity() == rarity) {
-                totalWeight += entry.getValue();
-            }
-        }
-
-        if (totalWeight <= 0) {
-            return null;
-        }
-
-        int roll = ThreadLocalRandom.current().nextInt(totalWeight);
-
-        for (Map.Entry<String, Integer> entry : entries.entrySet()) {
-            Fragment fragment = FRAGMENTS.get(entry.getKey());
-
-            if (fragment == null || fragment.getRarity() != rarity) {
-                continue;
-            }
-
-            roll -= entry.getValue();
-
-            if (roll < 0) {
-                return fragment;
-            }
-        }
-
-        return null;
+        return pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
     }
 
-    private static final class FragmentEntry {
+    private static void register(Fragment fragment) {
+        if (FRAGMENTS.put(fragment.getId(), fragment) != null) {
+            throw new IllegalArgumentException(
+                    "Duplicate fragment id: " + fragment.getId()
+            );
+        }
+    }
 
-        private final Fragment fragment;
-
-        private FragmentEntry(Fragment fragment) {
-            this.fragment = fragment;
+    private static void rarities(
+            LootTables lootTable,
+            Map<Fragment.Rarity, Integer> rarities
+    ) {
+        if (rarities.isEmpty()) {
+            throw new IllegalArgumentException("Rarity map cannot be empty");
         }
 
-        private FragmentEntry loot(
-                LootTables lootTable,
-                int weight
-        ) {
-            if (weight <= 0) {
+        Map<Fragment.Rarity, Integer> validated =
+                new EnumMap<>(Fragment.Rarity.class);
+
+        for (Map.Entry<Fragment.Rarity, Integer> entry : rarities.entrySet()) {
+            if (entry.getKey() == null) {
+                throw new IllegalArgumentException("Rarity cannot be null");
+            }
+
+            if (entry.getValue() == null || entry.getValue() <= 0) {
                 throw new IllegalArgumentException(
-                        "Fragment loot weight must be positive"
+                        "Rarity weight must be positive"
                 );
             }
 
-            FRAGMENT_LOOT
-                    .computeIfAbsent(lootTable, key -> new HashMap<>())
-                    .put(fragment.getId(), weight);
-
-            return this;
+            validated.put(entry.getKey(), entry.getValue());
         }
+
+        LOOT_RARITIES.put(lootTable, validated);
     }
 }
