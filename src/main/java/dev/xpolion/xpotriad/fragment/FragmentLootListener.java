@@ -1,32 +1,23 @@
 package dev.xpolion.xpotriad.fragment;
 
-import java.util.concurrent.ThreadLocalRandom;
-
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockDispenseLootEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.world.LootGenerateEvent;
-import org.bukkit.loot.LootTables;
 
+/**
+ * Translates Minecraft loot events into LootSource values and passes them
+ * to FragmentRegistry. This listener contains NO chance or rarity logic.
+ */
 public final class FragmentLootListener implements Listener {
 
-    private static final double ANCIENT_CITY_CHANCE = 0.15;
-
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onLootGenerate(LootGenerateEvent event) {
-
-        LootTables lootTable = getLootTable(event);
-
-        if (lootTable == null) {
-            return;
-        }
-
-        double chance = getChance(lootTable);
-
-        if (ThreadLocalRandom.current().nextDouble() >= chance) {
-            return;
-        }
-
-        Fragment fragment = FragmentRegistry.rollLoot(lootTable);
+        Fragment fragment = FragmentRegistry.roll(
+                LootSource.lootTable(event.getLootTable())
+        );
 
         if (fragment == null) {
             return;
@@ -35,21 +26,35 @@ public final class FragmentLootListener implements Listener {
         event.getLoot().add(FragmentItem.create(fragment));
     }
 
-    private LootTables getLootTable(LootGenerateEvent event) {
-        for (LootTables table : LootTables.values()) {
-            if (table.getKey().equals(event.getLootTable().getKey())) {
-                return table;
-            }
+    @EventHandler(ignoreCancelled = true)
+    public void onDispenseLoot(BlockDispenseLootEvent event) {
+        Fragment fragment = FragmentRegistry.roll(
+                LootSource.dispensedLoot(event.getLootTable())
+        );
+
+        if (fragment == null) {
+            return;
         }
 
-        return null;
+        event.getDispensedLoot().add(FragmentItem.create(fragment));
     }
 
-    private double getChance(LootTables lootTable) {
-        if (lootTable == LootTables.ANCIENT_CITY) {
-            return ANCIENT_CITY_CHANCE;
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityDeath(EntityDeathEvent event) {
+        Player killer = event.getEntity().getKiller();
+
+        if (killer == null) {
+            return;
         }
 
-        return 0.0;
+        Fragment fragment = FragmentRegistry.roll(
+                LootSource.entity(event.getEntity().getType())
+        );
+
+        if (fragment == null) {
+            return;
+        }
+
+        event.getDrops().add(FragmentItem.create(fragment));
     }
 }

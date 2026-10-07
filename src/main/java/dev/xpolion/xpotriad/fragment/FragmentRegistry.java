@@ -7,17 +7,37 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.bukkit.loot.LootTables;
-
 import dev.xpolion.xpotriad.fragment.fragments.ExplosionFragment;
 import dev.xpolion.xpotriad.fragment.fragments.HealFragment;
 import dev.xpolion.xpotriad.fragment.fragments.InvisibilityFragment;
 import dev.xpolion.xpotriad.fragment.fragments.MarkFragment;
 import dev.xpolion.xpotriad.fragment.fragments.SpeedFragment;
 
+/**
+ * Owns fragment definitions and ALL fragment loot logic.
+ *
+ * Loot flow (single entry point):
+ *   resolve source config -> spawn chance -> rarity roll -> uniform fragment
+ *
+ * Source configuration:
+ *   - Keys ending with '/' or '_' are prefix rules (match by startsWith).
+ *   - All other keys are exact rules (match by equals).
+ *   - Exact rules take priority over prefix rules.
+ *   - Every "chests/..." loot-table key is eligible by default.
+ *   - All other sources (entities, ...) are opt-in: they require at
+ *     least one exact or prefix rule to exist.
+ *
+ * Defaults:
+ *   chance   = 0.15
+ *   rarities = COMMON 60 / UNCOMMON 25 / RARE 10 / EPIC 4 / LEGENDARY 1
+ *
+ * Within a selected rarity, fragments are picked uniformly (no weights).
+ */
 public final class FragmentRegistry {
 
-    private static final Map<String, Fragment> FRAGMENTS = new HashMap<>();
+    private static final double DEFAULT_CHANCE = 0.15;
+
+    private static final String CHEST_PREFIX = "chests/";
 
     private static final Map<Fragment.Rarity, Integer> DEFAULT_RARITIES = Map.of(
             Fragment.Rarity.COMMON, 60,
@@ -27,8 +47,13 @@ public final class FragmentRegistry {
             Fragment.Rarity.LEGENDARY, 1
     );
 
-    private static final Map<LootTables, Map<Fragment.Rarity, Integer>> LOOT_RARITIES =
-            new HashMap<>();
+    private static final Map<String, Fragment> FRAGMENTS = new HashMap<>();
+
+    /** Exact-key source rules (key does not end with '/' or '_'). */
+    private static final Map<String, SourceRule> EXACT_RULES = new HashMap<>();
+
+    /** Prefix source rules (key ends with '/' or '_'), matched by startsWith. */
+    private static final Map<String, SourceRule> PREFIX_RULES = new HashMap<>();
 
     static {
         register(new InvisibilityFragment());
@@ -37,13 +62,63 @@ public final class FragmentRegistry {
         register(new ExplosionFragment());
         register(new MarkFragment());
 
-        rarities(LootTables.ANCIENT_CITY, Map.of(
+        // --- Exact loot-table rules (real Paper 26.3 keys) ---
+
+        rarities("chests/ancient_city", Map.of(
                 Fragment.Rarity.COMMON, 45,
                 Fragment.Rarity.UNCOMMON, 30,
                 Fragment.Rarity.RARE, 15,
                 Fragment.Rarity.EPIC, 7,
                 Fragment.Rarity.LEGENDARY, 3
         ));
+        chance("chests/ancient_city", 0.15);
+
+        rarities("chests/woodland_mansion", Map.of(
+                Fragment.Rarity.COMMON, 50,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 15,
+                Fragment.Rarity.EPIC, 7,
+                Fragment.Rarity.LEGENDARY, 3
+        ));
+
+        rarities("chests/nether_bridge", Map.of(
+                Fragment.Rarity.COMMON, 55,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 12,
+                Fragment.Rarity.EPIC, 5,
+                Fragment.Rarity.LEGENDARY, 3
+        ));
+
+        // --- Prefix rules: one line covers a whole key group ---
+        // Vanilla bastion keys are "chests/bastion_*" (underscore), so the
+        // prefix rule uses '_' to match them all.
+        rarities("chests/bastion_", Map.of(
+                Fragment.Rarity.COMMON, 45,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 15,
+                Fragment.Rarity.EPIC, 10,
+                Fragment.Rarity.LEGENDARY, 5
+        ));
+
+        rarities("chests/trial_chambers/", Map.of(
+                Fragment.Rarity.COMMON, 50,
+                Fragment.Rarity.UNCOMMON, 25,
+                Fragment.Rarity.RARE, 15,
+                Fragment.Rarity.EPIC, 7,
+                Fragment.Rarity.LEGENDARY, 3
+        ));
+
+        rarities("chests/village/", Map.of(
+                Fragment.Rarity.COMMON, 70,
+                Fragment.Rarity.UNCOMMON, 20,
+                Fragment.Rarity.RARE, 7,
+                Fragment.Rarity.EPIC, 2,
+                Fragment.Rarity.LEGENDARY, 1
+        ));
+
+        // --- Entity sources are opt-in; without a rule they never drop ---
+        // Example (commented out):
+        // chance("entities/", 0.01);
     }
 
     private FragmentRegistry() {
@@ -53,8 +128,31 @@ public final class FragmentRegistry {
         return FRAGMENTS.get(id);
     }
 
-    public static Fragment rollLoot(LootTables lootTable) {
-        Fragment.Rarity rarity = rollRarity(lootTable);
+    // ------------------------------------------------------------------
+    // Loot entry point: ALL loot logic lives here
+    // ------------------------------------------------------------------
+
+    /**
+     * Rolls fragment loot for the given source.
+     *
+     * @return a fragment to drop, or null when the source is not eligible,
+     *         the chance roll fails, or no fragment matches the rolled rarity.
+     */
+    public static Fragment roll(LootSource source) {
+        SourceRule exact = EXACT_RULES.get(source.key());
+        SourceRule prefix = matchPrefix(source.key());
+
+        if (exact == null && prefix == null && !source.key().startsWith(CHEST_PREFIX)) {
+            return null; // not eligible (opt-in source without rules)
+        }
+
+        double chance = resolveChance(exact, prefix);
+
+        if (chance <= 0.0 || ThreadLocalRandom.current().nextDouble() >= chance) {
+            return null;
+        }
+
+        Fragment.Rarity rarity = rollRarity(resolveRarities(exact, prefix));
 
         if (rarity == null) {
             return null;
@@ -63,10 +161,7 @@ public final class FragmentRegistry {
         return rollFragment(rarity);
     }
 
-    private static Fragment.Rarity rollRarity(LootTables lootTable) {
-        Map<Fragment.Rarity, Integer> rarities =
-                LOOT_RARITIES.getOrDefault(lootTable, DEFAULT_RARITIES);
-
+    private static Fragment.Rarity rollRarity(Map<Fragment.Rarity, Integer> rarities) {
         int totalWeight = 0;
 
         for (int weight : rarities.values()) {
@@ -114,10 +209,29 @@ public final class FragmentRegistry {
         }
     }
 
-    private static void rarities(
-            LootTables lootTable,
-            Map<Fragment.Rarity, Integer> rarities
-    ) {
+    // ------------------------------------------------------------------
+    // Source configuration (compact rules API)
+    // ------------------------------------------------------------------
+
+    /**
+     * Sets the spawn chance for a source key.
+     *
+     * Key ends with '/' or '_'  -> prefix rule (matches key group).
+     * Otherwise                 -> exact rule.
+     */
+    private static void chance(String key, double chance) {
+        if (chance < 0.0 || chance > 1.0) {
+            throw new IllegalArgumentException("Chance must be between 0.0 and 1.0");
+        }
+
+        ruleFor(key).chance = chance;
+    }
+
+    /**
+     * Sets rarity weights for a source key.
+     * All weights must be positive.
+     */
+    private static void rarities(String key, Map<Fragment.Rarity, Integer> rarities) {
         if (rarities.isEmpty()) {
             throw new IllegalArgumentException("Rarity map cannot be empty");
         }
@@ -131,14 +245,80 @@ public final class FragmentRegistry {
             }
 
             if (entry.getValue() == null || entry.getValue() <= 0) {
-                throw new IllegalArgumentException(
-                        "Rarity weight must be positive"
-                );
+                throw new IllegalArgumentException("Rarity weight must be positive");
             }
 
             validated.put(entry.getKey(), entry.getValue());
         }
 
-        LOOT_RARITIES.put(lootTable, validated);
+        ruleFor(key).rarities = validated;
+    }
+
+    private static SourceRule ruleFor(String key) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("Source key cannot be null or blank");
+        }
+
+        if (isPrefixKey(key)) {
+            return PREFIX_RULES.computeIfAbsent(key, k -> new SourceRule());
+        }
+
+        return EXACT_RULES.computeIfAbsent(key, k -> new SourceRule());
+    }
+
+    private static boolean isPrefixKey(String key) {
+        return key.endsWith("/") || key.endsWith("_");
+    }
+
+    // ------------------------------------------------------------------
+    // Rule resolution (exact beats prefix; longest prefix wins)
+    // ------------------------------------------------------------------
+
+    private static SourceRule matchPrefix(String key) {
+        SourceRule best = null;
+        int bestLength = -1;
+
+        for (Map.Entry<String, SourceRule> entry : PREFIX_RULES.entrySet()) {
+            if (key.startsWith(entry.getKey())
+                    && entry.getKey().length() > bestLength) {
+                best = entry.getValue();
+                bestLength = entry.getKey().length();
+            }
+        }
+
+        return best;
+    }
+
+    private static double resolveChance(SourceRule exact, SourceRule prefix) {
+        if (exact != null && exact.chance != null) {
+            return exact.chance;
+        }
+
+        if (prefix != null && prefix.chance != null) {
+            return prefix.chance;
+        }
+
+        return DEFAULT_CHANCE;
+    }
+
+    private static Map<Fragment.Rarity, Integer> resolveRarities(
+            SourceRule exact,
+            SourceRule prefix
+    ) {
+        if (exact != null && exact.rarities != null) {
+            return exact.rarities;
+        }
+
+        if (prefix != null && prefix.rarities != null) {
+            return prefix.rarities;
+        }
+
+        return DEFAULT_RARITIES;
+    }
+
+    private static final class SourceRule {
+
+        private Double chance;
+        private Map<Fragment.Rarity, Integer> rarities;
     }
 }
