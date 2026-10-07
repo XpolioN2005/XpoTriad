@@ -1,5 +1,7 @@
 package dev.xpolion.xpotriad.fragment;
 
+import java.util.List;
+
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,28 +17,26 @@ public final class FragmentLootListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onLootGenerate(LootGenerateEvent event) {
-        Fragment fragment = FragmentRegistry.roll(
-                LootSource.lootTable(event.getLootTable())
+        List<Fragment> drops = FragmentRegistry.roll(
+                LootSource.lootTable(event.getLootTable()),
+                FragmentRegistry.MAX_FRAGMENTS_PER_INTERACTION
         );
 
-        if (fragment == null) {
-            return;
+        for (Fragment fragment : drops) {
+            event.getLoot().add(FragmentItem.create(fragment));
         }
-
-        event.getLoot().add(FragmentItem.create(fragment));
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onDispenseLoot(BlockDispenseLootEvent event) {
-        Fragment fragment = FragmentRegistry.roll(
-                LootSource.dispensedLoot(event.getLootTable())
+        List<Fragment> drops = FragmentRegistry.roll(
+                LootSource.dispensedLoot(event.getLootTable()),
+                FragmentRegistry.MAX_FRAGMENTS_PER_INTERACTION
         );
 
-        if (fragment == null) {
-            return;
+        for (Fragment fragment : drops) {
+            event.getDispensedLoot().add(FragmentItem.create(fragment));
         }
-
-        event.getDispensedLoot().add(FragmentItem.create(fragment));
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -47,14 +47,13 @@ public final class FragmentLootListener implements Listener {
             return;
         }
 
-        Fragment fragment = FragmentRegistry.roll(
-                LootSource.entity(event.getEntity().getType())
+        List<Fragment> drops = FragmentRegistry.roll(
+                LootSource.entity(event.getEntity().getType()),
+                FragmentRegistry.MAX_FRAGMENTS_PER_INTERACTION
         );
 
-        if (fragment == null) {
-            return;
+        for (Fragment fragment : drops) {
+            event.getDrops().add(FragmentItem.create(fragment));
         }
-
-        event.getDrops().add(FragmentItem.create(fragment));
     }
 }

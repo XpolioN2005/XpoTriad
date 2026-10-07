@@ -37,6 +37,9 @@ public final class FragmentRegistry {
 
     private static final double DEFAULT_CHANCE = 0.15;
 
+    /** Maximum fragments that can drop from a single loot interaction. */
+    public static final int MAX_FRAGMENTS_PER_INTERACTION = 3;
+
     private static final String CHEST_PREFIX = "chests/";
 
     private static final Map<Fragment.Rarity, Integer> DEFAULT_RARITIES = Map.of(
@@ -159,6 +162,31 @@ public final class FragmentRegistry {
         }
 
         return rollFragment(rarity);
+    }
+
+    /**
+     * Rolls up to {@code max} fragments for the given source, stopping at
+     * the first failed roll (chance miss, ineligible source, or empty
+     * rarity pool). Duplicates are allowed.
+     */
+    public static List<Fragment> roll(LootSource source, int max) {
+        if (max < 0) {
+            throw new IllegalArgumentException("Max cannot be negative");
+        }
+
+        List<Fragment> drops = new ArrayList<>();
+
+        for (int i = 0; i < max; i++) {
+            Fragment fragment = roll(source);
+
+            if (fragment == null) {
+                break;
+            }
+
+            drops.add(fragment);
+        }
+
+        return drops;
     }
 
     private static Fragment.Rarity rollRarity(Map<Fragment.Rarity, Integer> rarities) {
