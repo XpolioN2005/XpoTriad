@@ -1,11 +1,12 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
-import org.bukkit.ChatColor;
-
 import dev.xpolion.xpotriad.effect.effects.ExplosionEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
 import dev.xpolion.xpotriad.fragment.Fragment.Type;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public final class ExplosionFragment extends Fragment {
         super(
                 "explosion",
                 "Explosion Fragment",
-                List.of(ChatColor.GRAY + "Creates an explosion."),
+                List.of(Component.text("Creates an explosion.", NamedTextColor.GRAY)),
                 0L,
                 Rarity.RARE,
                 Type.MELEE,

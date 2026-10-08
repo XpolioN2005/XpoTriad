@@ -5,7 +5,7 @@ import dev.xpolion.xpotriad.ability.AbilityItem;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.FragmentItem;
 import net.kyori.adventure.text.Component;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -77,38 +77,38 @@ public final class EtchLoom {
         // Info / description row (row 3)
         session.info(2, 3, createInfoPane(
                 Material.CYAN_STAINED_GLASS_PANE,
-                ChatColor.AQUA + "Target",
+                Component.text("Target", NamedTextColor.AQUA),
                 List.of(
-                        ChatColor.GRAY + "The item that will receive the Ability.",
-                        ChatColor.GRAY + "Only supported weapons/tools can be engraved.",
-                        ChatColor.GRAY + "Existing item data is preserved."
+                        Component.text("The item that will receive the Ability.", NamedTextColor.GRAY),
+                        Component.text("Only supported weapons/tools can be engraved.", NamedTextColor.GRAY),
+                        Component.text("Existing item data is preserved.", NamedTextColor.GRAY)
                 )
         ));
 
         session.info(4, 3, createInfoPane(
                 Material.PURPLE_STAINED_GLASS_PANE,
-                ChatColor.LIGHT_PURPLE + "Pre-Cast Fragment",
+                Component.text("Pre-Cast Fragment", NamedTextColor.LIGHT_PURPLE),
                 List.of(
-                        ChatColor.GRAY + "The Fragment placed below will execute",
-                        ChatColor.GRAY + "during the PRE_CAST stage."
+                        Component.text("The Fragment placed below will execute", NamedTextColor.GRAY),
+                        Component.text("during the PRE_CAST stage.", NamedTextColor.GRAY)
                 )
         ));
 
         session.info(5, 3, createInfoPane(
                 Material.MAGENTA_STAINED_GLASS_PANE,
-                ChatColor.LIGHT_PURPLE + "Cast Fragment",
+                Component.text("Cast Fragment", NamedTextColor.LIGHT_PURPLE),
                 List.of(
-                        ChatColor.GRAY + "The Fragment placed below will execute",
-                        ChatColor.GRAY + "during the CAST stage."
+                        Component.text("The Fragment placed below will execute", NamedTextColor.GRAY),
+                        Component.text("during the CAST stage.", NamedTextColor.GRAY)
                 )
         ));
 
         session.info(6, 3, createInfoPane(
                 Material.RED_STAINED_GLASS_PANE,
-                ChatColor.LIGHT_PURPLE + "Post-Cast Fragment",
+                Component.text("Post-Cast Fragment", NamedTextColor.LIGHT_PURPLE),
                 List.of(
-                        ChatColor.GRAY + "The Fragment placed below will execute",
-                        ChatColor.GRAY + "during the POST_CAST stage."
+                        Component.text("The Fragment placed below will execute", NamedTextColor.GRAY),
+                        Component.text("during the POST_CAST stage.", NamedTextColor.GRAY)
                 )
         ));
 
@@ -135,7 +135,7 @@ public final class EtchLoom {
                 4,
                 createNamedItem(
                         Material.LIME_STAINED_GLASS_PANE,
-                        ChatColor.GREEN + "Engrave"
+                        Component.text("Engrave", NamedTextColor.GREEN)
                 ),
                 this::onEngrave
         );
@@ -146,7 +146,7 @@ public final class EtchLoom {
                 6,
                 createNamedItem(
                         Material.WRITTEN_BOOK,
-                        ChatColor.GOLD + "Tutorial"
+                        Component.text("Tutorial", NamedTextColor.GOLD)
                 ),
                 tutorialCommand
         );
@@ -353,16 +353,16 @@ public final class EtchLoom {
 
     private static ItemStack createInfoPane(
             Material material,
-            String name,
-            List<String> lore
+            Component name,
+            List<Component> lore
     ) {
         ItemStack item = new ItemStack(material);
 
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(name);
-            meta.setLore(lore);
+            meta.displayName(name);
+            meta.lore(lore);
             item.setItemMeta(meta);
         }
 
@@ -371,14 +371,14 @@ public final class EtchLoom {
 
     private static ItemStack createNamedItem(
             Material material,
-            String name
+            Component name
     ) {
         ItemStack item = new ItemStack(material);
 
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(name);
+            meta.displayName(name);
             item.setItemMeta(meta);
         }
 

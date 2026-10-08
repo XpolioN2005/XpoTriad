@@ -1,11 +1,12 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
-import org.bukkit.ChatColor;
-
 import dev.xpolion.xpotriad.effect.effects.SpeedEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
 import dev.xpolion.xpotriad.fragment.Fragment.Type;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public final class SpeedFragment extends Fragment {
         super(
                 "speed",
                 "Speed Fragment",
-                List.of(ChatColor.GRAY + "Grants increased movement speed."),
+                List.of(Component.text("Grants increased movement speed.", NamedTextColor.GRAY)),
                 20L,
                 Rarity.COMMON,
                 Type.MELEE,

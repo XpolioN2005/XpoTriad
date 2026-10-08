@@ -86,7 +86,9 @@ package dev.xpolion.xpotriad.fragment;
 import dev.xpolion.xpotriad.ability.AbilityContext;
 import dev.xpolion.xpotriad.effect.Effect;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.bukkit.Material;
 
 import java.util.List;
@@ -100,19 +102,19 @@ public abstract class Fragment {
 
     public enum Rarity {
 
-        COMMON(ChatColor.WHITE),
-        UNCOMMON(ChatColor.GREEN),
-        RARE(ChatColor.AQUA),
-        EPIC(ChatColor.LIGHT_PURPLE),
-        LEGENDARY(ChatColor.GOLD);
+        COMMON(NamedTextColor.WHITE),
+        UNCOMMON(NamedTextColor.GREEN),
+        RARE(NamedTextColor.AQUA),
+        EPIC(NamedTextColor.LIGHT_PURPLE),
+        LEGENDARY(NamedTextColor.GOLD);
 
-        public ChatColor getColor();
+        public NamedTextColor getColor();
     }
 
     protected Fragment(
         String id,
         String name,
-        List<String> lore,
+        List<Component> lore,
         long executionTime,
         Rarity rarity,
         Type type,
@@ -122,9 +124,9 @@ public abstract class Fragment {
 
     public final String getId();
     public final String getName();
-    public final String getDisplayName();
+    public final Component getDisplayName();
     public final Material getMaterial(); // Always FLOW_POTTERY_SHERD
-    public final List<String> getLore();
+    public final List<Component> getLore();
     public final boolean hasGlint(); // Always true
     public final long getExecutionTime();
     public final Rarity getRarity();
@@ -136,7 +138,9 @@ public abstract class Fragment {
 }
 ```
 
-`Rarity` is part of the fragment definition and is also used by the loot system when selecting a fragment.
+`Rarity` is part of the fragment definition and is also used by the loot system when selecting a fragment. `getColor()` returns an Adventure `NamedTextColor` — the modern replacement for the deprecated `org.bukkit.ChatColor`.
+
+The display name and lore are Adventure `Component`s (`Component.text(name, rarity colour)`), applied to items via the non-deprecated `ItemMeta.displayName(...)` / `ItemMeta.lore(...)` methods.
 
 `Type` classifies the fragment's execution style (`MELEE` or `RANGED`) and is rendered in the physical fragment item's lore (`Type: <MELEE|RANGED>`).
 
@@ -569,7 +573,9 @@ import dev.xpolion.xpotriad.fragment.FragmentItem;
 import dev.xpolion.xpotriad.particle.*;
 import dev.xpolion.xpotriad.runtime.*;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -725,7 +731,7 @@ public class EmpowerFragment extends Fragment {
         super(
             "empower",
             "Empowerment Fragment",
-            List.of(ChatColor.GRAY + "Grants a temporary fire aura."),
+            List.of(Component.text("Grants a temporary fire aura.", NamedTextColor.GRAY)),
             10,
             Rarity.RARE,
             Type.MELEE,

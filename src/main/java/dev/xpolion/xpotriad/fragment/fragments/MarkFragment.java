@@ -7,6 +7,8 @@ import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
 import dev.xpolion.xpotriad.fragment.Fragment.Type;
 
+import net.kyori.adventure.text.Component;
+
 /**
  * Applies a temporary 10-second Mark to a target entity.
  * Marked targets take 1.5x damage on the next incoming damage instance.
@@ -23,8 +25,8 @@ public final class MarkFragment extends Fragment {
                 "mark",
                 "Mark Fragment",
                 List.of(
-                        "Marks a target for 10 seconds.",
-                        "The next damage dealt to the target is multiplied by 1.5x."
+                        Component.text("Marks a target for 10 seconds."),
+                        Component.text("The next damage dealt to the target is multiplied by 1.5x.")
                 ),
                 10L,
                 Rarity.EPIC,

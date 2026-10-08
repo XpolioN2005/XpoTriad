@@ -3,7 +3,9 @@ package dev.xpolion.xpotriad.fragment;
 import dev.xpolion.xpotriad.ability.AbilityContext;
 import dev.xpolion.xpotriad.effect.Effect;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.bukkit.Material;
 
 import java.util.List;
@@ -32,19 +34,19 @@ public abstract class Fragment {
     }
 
     public enum Rarity {
-        COMMON(ChatColor.WHITE),
-        UNCOMMON(ChatColor.GREEN),
-        RARE(ChatColor.AQUA),
-        EPIC(ChatColor.LIGHT_PURPLE),
-        LEGENDARY(ChatColor.GOLD);
+        COMMON(NamedTextColor.WHITE),
+        UNCOMMON(NamedTextColor.GREEN),
+        RARE(NamedTextColor.AQUA),
+        EPIC(NamedTextColor.LIGHT_PURPLE),
+        LEGENDARY(NamedTextColor.GOLD);
 
-        private final ChatColor color;
+        private final NamedTextColor color;
 
-        Rarity(ChatColor color) {
+        Rarity(NamedTextColor color) {
             this.color = color;
         }
 
-        public ChatColor getColor() {
+        public NamedTextColor getColor() {
             return color;
         }
     }
@@ -53,9 +55,9 @@ public abstract class Fragment {
 
     private final String id;
     private final String name;
-    private final String displayName;
+    private final Component displayName;
     private final Material material;
-    private final List<String> lore;
+    private final List<Component> lore;
     private final boolean glint;
     private final long executionTime;
     private final Rarity rarity;
@@ -66,7 +68,7 @@ public abstract class Fragment {
     protected Fragment(
             String id,
             String name,
-            List<String> lore,
+            List<Component> lore,
             long executionTime,
             Rarity rarity,
             Type type,
@@ -84,7 +86,7 @@ public abstract class Fragment {
         }
         this.id               = id;
         this.name             = name;
-        this.displayName      = rarity.getColor() + name;
+        this.displayName      = Component.text(name, rarity.getColor());
         this.material         = DEFAULT_MATERIAL;
         this.lore             = List.copyOf(lore);
         this.glint            = true;
@@ -103,7 +105,7 @@ public abstract class Fragment {
         return name;
     }
 
-    public final String getDisplayName() {
+    public final Component getDisplayName() {
         return displayName;
     }
 
@@ -111,7 +113,7 @@ public abstract class Fragment {
         return material;
     }
 
-    public final List<String> getLore() {
+    public final List<Component> getLore() {
         return lore;
     }
 

@@ -2,7 +2,8 @@ package dev.xpolion.xpotriad.ability;
 
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.FragmentRegistry;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
@@ -132,7 +133,7 @@ public final class AbilityItem {
         // The item itself still retains all other ItemMeta:
         // name, enchantments, attributes, damage/durability, etc.
         //
-        meta.setLore(createLore(ability));
+        meta.lore(createLore(ability));
         meta.setEnchantmentGlintOverride(true);
 
         item.setItemMeta(meta);
@@ -263,10 +264,10 @@ public final class AbilityItem {
     // Lore
     // -------------------------------------------------------------------------
 
-    private static List<String> createLore(Ability ability) {
-        List<String> lore = new ArrayList<>();
+    private static List<Component> createLore(Ability ability) {
+        List<Component> lore = new ArrayList<>();
 
-        lore.add(ChatColor.DARK_PURPLE + "Ability");
+        lore.add(Component.text("Ability", NamedTextColor.DARK_PURPLE));
 
         addStageLore(lore, "Pre-Cast",  ability.getFragment(Ability.Stage.PRE_CAST));
         addStageLore(lore, "Cast",      ability.getFragment(Ability.Stage.CAST));
@@ -276,10 +277,13 @@ public final class AbilityItem {
         double cooldownSeconds = cooldownTicks / 20.0;
 
         lore.add(
-                ChatColor.GRAY
-                        + "Cooldown: "
-                        + ChatColor.WHITE
-                        + formatCooldown(cooldownSeconds)
+                Component.text("Cooldown: ", NamedTextColor.GRAY)
+                        .append(
+                                Component.text(
+                                        formatCooldown(cooldownSeconds),
+                                        NamedTextColor.WHITE
+                                )
+                        )
         );
 
         return lore;
@@ -294,31 +298,45 @@ public final class AbilityItem {
      * If the stage is empty, adds the existing "Empty" single line only.
      */
     private static void addStageLore(
-            List<String> lore,
+            List<Component> lore,
             String displayName,
             Fragment fragment
     ) {
         if (fragment == null) {
-            lore.add(ChatColor.LIGHT_PURPLE + displayName + ": " + ChatColor.GRAY + "Empty");
+            lore.add(
+                    Component.text(displayName + ": ", NamedTextColor.LIGHT_PURPLE)
+                            .append(Component.text("Empty", NamedTextColor.GRAY))
+            );
             return;
         }
 
         // Stage label + fragment name (white) + rarity tag in rarity color
-        String rarityTag =
-                fragment.getRarity().getColor()
-                + "[" + fragment.getRarity().name() + "]";
-
         lore.add(
-                ChatColor.LIGHT_PURPLE + displayName + ": "
-                + ChatColor.WHITE + ChatColor.stripColor(fragment.getDisplayName()) + " "
-                + rarityTag
+                Component.text(displayName + ": ", NamedTextColor.LIGHT_PURPLE)
+                        .append(
+                                Component.text(
+                                        fragment.getName() + " ",
+                                        NamedTextColor.WHITE
+                                )
+                        )
+                        .append(
+                                Component.text(
+                                        "[" + fragment.getRarity().name() + "]",
+                                        fragment.getRarity().getColor()
+                                )
+                        )
         );
 
         // Execution time on the next line, indented
         double execSeconds = fragment.getExecutionTime() / 20.0;
         lore.add(
-                ChatColor.GRAY + "Execution Time: "
-                + ChatColor.WHITE + formatCooldown(execSeconds)
+                Component.text("Execution Time: ", NamedTextColor.GRAY)
+                        .append(
+                                Component.text(
+                                        formatCooldown(execSeconds),
+                                        NamedTextColor.WHITE
+                                )
+                        )
         );
     }
 
@@ -353,7 +371,7 @@ public final class AbilityItem {
             pdc.remove(fragmentKey);
         }
 
-        meta.setLore(null);
+        meta.lore(null);
         meta.setEnchantmentGlintOverride(false);
 
         result.setItemMeta(meta);

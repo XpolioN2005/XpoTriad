@@ -1,11 +1,12 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
-import org.bukkit.ChatColor;
-
 import dev.xpolion.xpotriad.effect.effects.InvisibilityEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
 import dev.xpolion.xpotriad.fragment.Fragment.Type;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public final class InvisibilityFragment extends Fragment {
         super(
                 "invisibility",
                 "Invisibility Fragment",
-                List.of(ChatColor.GRAY + "Grants invisibility."),
+                List.of(Component.text("Grants invisibility.", NamedTextColor.GRAY)),
                 10L,
                 Rarity.UNCOMMON,
                 Type.MELEE,

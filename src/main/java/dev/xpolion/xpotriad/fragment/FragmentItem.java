@@ -1,6 +1,8 @@
 package dev.xpolion.xpotriad.fragment;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -59,8 +61,8 @@ public final class FragmentItem {
             );
         }
 
-        meta.setDisplayName(fragment.getDisplayName());
-        meta.setLore(buildLore(fragment));
+        meta.displayName(fragment.getDisplayName());
+        meta.lore(buildLore(fragment));
 
         if (fragment.hasGlint()) {
             meta.setEnchantmentGlintOverride(true);
@@ -84,26 +86,56 @@ public final class FragmentItem {
      *   Classification – Rarity, Type
      *   Timing       – Execution Time, Cooldown Modifier
      */
-    private static List<String> buildLore(Fragment fragment) {
-        List<String> lore = new ArrayList<>();
+    private static List<Component> buildLore(Fragment fragment) {
+        List<Component> lore = new ArrayList<>();
 
         // --- Identity: existing description lines ---
         if (!fragment.getLore().isEmpty()) {
-            for (String line : fragment.getLore()) {
-                lore.add(line);
-            }
-            lore.add(""); // blank separator
+            lore.addAll(fragment.getLore());
+            lore.add(Component.empty()); // blank separator
         }
 
         // --- Classification ---
-        lore.add(ChatColor.GRAY + "Rarity: " + fragment.getRarity().getColor() + fragment.getRarity().name());
-        lore.add(ChatColor.GRAY + "Type: " + ChatColor.WHITE + fragment.getType().name());
+        lore.add(
+                Component.text("Rarity: ", NamedTextColor.GRAY)
+                        .append(
+                                Component.text(
+                                        fragment.getRarity().name(),
+                                        fragment.getRarity().getColor()
+                                )
+                        )
+        );
+        lore.add(
+                Component.text("Type: ", NamedTextColor.GRAY)
+                        .append(
+                                Component.text(
+                                        fragment.getType().name(),
+                                        NamedTextColor.WHITE
+                                )
+                        )
+        );
 
-        lore.add(""); // blank separator
+        lore.add(Component.empty()); // blank separator
 
         // --- Timing ---
-        lore.add(ChatColor.GRAY + "Execution Time: " + ChatColor.WHITE + formatTicks(fragment.getExecutionTime()));
-        lore.add(ChatColor.GRAY + "Cooldown Modifier: " + ChatColor.WHITE + formatModifier(fragment.getCooldownModifier()));
+        lore.add(
+                Component.text("Execution Time: ", NamedTextColor.GRAY)
+                        .append(
+                                Component.text(
+                                        formatTicks(fragment.getExecutionTime()),
+                                        NamedTextColor.WHITE
+                                )
+                        )
+        );
+        lore.add(
+                Component.text("Cooldown Modifier: ", NamedTextColor.GRAY)
+                        .append(
+                                Component.text(
+                                        formatModifier(fragment.getCooldownModifier()),
+                                        NamedTextColor.WHITE
+                                )
+                        )
+        );
 
         return lore;
     }

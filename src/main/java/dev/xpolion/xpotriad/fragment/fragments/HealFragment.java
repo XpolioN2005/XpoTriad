@@ -1,11 +1,12 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
-import org.bukkit.ChatColor;
-
 import dev.xpolion.xpotriad.effect.effects.HealEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
 import dev.xpolion.xpotriad.fragment.Fragment.Type;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public final class HealFragment extends Fragment {
         super(
                 "heal",
                 "Heal Fragment",
-                List.of(ChatColor.GRAY + "Grants regeneration."),
+                List.of(Component.text("Grants regeneration.", NamedTextColor.GRAY)),
                 10L,
                 Rarity.COMMON,
                 Type.MELEE,
