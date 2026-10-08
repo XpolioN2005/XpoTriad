@@ -40,6 +40,9 @@ public final class AbilityEngine {
 
             if (fragment != null) {
                 fragment.execute(context);
+                // Record execution history for Repeat (runs after execute so
+                // RepeatEffect still sees the PREVIOUS fragment while applying).
+                context.setLastExecutedFragment(fragment);
                 nextDelay = fragment.getExecutionTime() + STAGE_BUFFER_TICKS;
             } else {
                 // Empty stage: advance immediately (0 delay), no buffer

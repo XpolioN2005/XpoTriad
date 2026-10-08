@@ -1,22 +1,26 @@
 package dev.xpolion.xpotriad;
 
-import dev.xpolion.xpotriad.ability.Ability;
 import dev.xpolion.xpotriad.ability.AbilityEngine;
 import dev.xpolion.xpotriad.ability.AbilityItem;
 import dev.xpolion.xpotriad.ability.AbilityListener;
+import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.FragmentItem;
 import dev.xpolion.xpotriad.fragment.FragmentLootListener;
 import dev.xpolion.xpotriad.fragment.FragmentRegistry;
-import dev.xpolion.xpotriad.fragment.fragments.*;
 import dev.xpolion.xpotriad.particle.ParticleSystem;
 import dev.xpolion.xpotriad.runtime.RuntimeManager;
 import dev.xpolion.xpotriad.visual.EtchLoom;
 import org.bukkit.Material;
+import org.bukkit.inventory.meta.BlockStateMeta;
+import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class Main extends JavaPlugin {
 
@@ -91,32 +95,36 @@ public final class Main extends JavaPlugin {
             return false;
         }
 
-        InvisibilityFragment invisibility =
-                (InvisibilityFragment) FragmentRegistry.get("invisibility");
-        SpeedFragment speed =
-                (SpeedFragment) FragmentRegistry.get("speed");
-        ExplosionFragment explosion =
-                (ExplosionFragment) FragmentRegistry.get("explosion");
-        MarkFragment mark = (MarkFragment) FragmentRegistry.get("mark");
-        HealFragment heal = (HealFragment) FragmentRegistry.get("heal");
+        // Chest(s) full of every registered fragment — nothing else is given.
+        // A single chest holds 27 slots; additional chests cover any overflow.
+        List<ItemStack> fragmentItems = new ArrayList<>();
 
-        Ability ability = new Ability();
+        for (Fragment fragment : FragmentRegistry.all()) {
+            fragmentItems.add(FragmentItem.create(fragment));
+        }
 
-        ability.setFragment(Ability.Stage.PRE_CAST,  invisibility);
-        ability.setFragment(Ability.Stage.CAST,      speed);
-        ability.setFragment(Ability.Stage.POST_CAST, explosion);
+        int chestCount = (fragmentItems.size() + 26) / 27;
 
-        ItemStack weapon = new ItemStack(Material.DIAMOND_SWORD);
+        for (int chestIndex = 0; chestIndex < chestCount; chestIndex++) {
+            ItemStack chestItem = new ItemStack(Material.CHEST);
+            BlockStateMeta meta = (BlockStateMeta) chestItem.getItemMeta();
 
-        AbilityItem.engrave(weapon, ability);
+            if (meta != null) {
+                Chest chest = (Chest) meta.getBlockState();
 
-        player.getInventory().addItem(weapon);
+                int from = chestIndex * 27;
+                int to = Math.min(from + 27, fragmentItems.size());
 
-        player.getInventory().addItem(FragmentItem.create(invisibility));
-        player.getInventory().addItem(FragmentItem.create(speed));
-        player.getInventory().addItem(FragmentItem.create(explosion));
-        player.getInventory().addItem(FragmentItem.create(mark));
-        player.getInventory().addItem(FragmentItem.create(heal));
+                for (int i = from; i < to; i++) {
+                    chest.getInventory().addItem(fragmentItems.get(i));
+                }
+
+                meta.setBlockState(chest);
+                chestItem.setItemMeta(meta);
+            }
+
+            player.getInventory().addItem(chestItem);
+        }
 
         return true;
     }

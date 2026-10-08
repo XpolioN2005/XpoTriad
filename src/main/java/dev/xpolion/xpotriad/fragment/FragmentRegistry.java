@@ -7,11 +7,36 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
+import dev.xpolion.xpotriad.fragment.fragments.BarrierFragment;
+import dev.xpolion.xpotriad.fragment.fragments.BlinkFragment;
+import dev.xpolion.xpotriad.fragment.fragments.CheatDeathFragment;
+import dev.xpolion.xpotriad.fragment.fragments.CleanseFragment;
+import dev.xpolion.xpotriad.fragment.fragments.DelayFragment;
 import dev.xpolion.xpotriad.fragment.fragments.ExplosionFragment;
+import dev.xpolion.xpotriad.fragment.fragments.ExecutionFragment;
+import dev.xpolion.xpotriad.fragment.fragments.GravityPullFragment;
 import dev.xpolion.xpotriad.fragment.fragments.HealFragment;
+import dev.xpolion.xpotriad.fragment.fragments.HoundCallFragment;
 import dev.xpolion.xpotriad.fragment.fragments.InvisibilityFragment;
+import dev.xpolion.xpotriad.fragment.fragments.KnockbackFragment;
+import dev.xpolion.xpotriad.fragment.fragments.LeapFragment;
+import dev.xpolion.xpotriad.fragment.fragments.LevitationFragment;
+import dev.xpolion.xpotriad.fragment.fragments.LifeStealFragment;
+import dev.xpolion.xpotriad.fragment.fragments.LineSnipeFragment;
 import dev.xpolion.xpotriad.fragment.fragments.MarkFragment;
+import dev.xpolion.xpotriad.fragment.fragments.MassFreezeFragment;
+import dev.xpolion.xpotriad.fragment.fragments.MeteorFragment;
+import dev.xpolion.xpotriad.fragment.fragments.ReflectFragment;
+import dev.xpolion.xpotriad.fragment.fragments.RepeatFragment;
+import dev.xpolion.xpotriad.fragment.fragments.RewindFragment;
+import dev.xpolion.xpotriad.fragment.fragments.ShieldFragment;
+import dev.xpolion.xpotriad.fragment.fragments.SlowFallingFragment;
+import dev.xpolion.xpotriad.fragment.fragments.SmokeBombFragment;
+import dev.xpolion.xpotriad.fragment.fragments.SoulLinkFragment;
 import dev.xpolion.xpotriad.fragment.fragments.SpeedFragment;
+import dev.xpolion.xpotriad.fragment.fragments.SwapFragment;
+import dev.xpolion.xpotriad.fragment.fragments.ThornsFragment;
+import dev.xpolion.xpotriad.fragment.fragments.WeakeningFragment;
 
 /**
  * Owns fragment definitions and ALL fragment loot logic.
@@ -69,6 +94,41 @@ public final class FragmentRegistry {
         register(new HealFragment());
         register(new ExplosionFragment());
         register(new MarkFragment());
+
+        // --- COMMON ---
+        register(new WeakeningFragment());
+        register(new KnockbackFragment());
+        register(new LeapFragment());
+        register(new ShieldFragment());
+        register(new SmokeBombFragment());
+        register(new SlowFallingFragment());
+        register(new DelayFragment());
+
+        // --- UNCOMMON ---
+        register(new CleanseFragment());
+        register(new LevitationFragment());
+        register(new ThornsFragment());
+
+        // --- RARE ---
+        register(new GravityPullFragment());
+        register(new BlinkFragment());
+        register(new LineSnipeFragment());
+        register(new BarrierFragment());
+        register(new ExecutionFragment());
+
+        // --- EPIC ---
+        register(new HoundCallFragment());
+        register(new ReflectFragment());
+        register(new LifeStealFragment());
+        register(new SwapFragment());
+        register(new SoulLinkFragment());
+
+        // --- LEGENDARY ---
+        register(new RewindFragment());
+        register(new MassFreezeFragment());
+        register(new MeteorFragment());
+        register(new CheatDeathFragment());
+        register(new RepeatFragment());
 
         // ==================================================================
         // STRUCTURE LOOT — all vanilla "chests/..." tables are eligible by
@@ -282,6 +342,14 @@ public final class FragmentRegistry {
 
     public static Fragment get(String id) {
         return FRAGMENTS.get(id);
+    }
+
+    /**
+     * Unmodifiable view of every registered fragment, in registration order
+     * is not guaranteed (backed by a HashMap).
+     */
+    public static java.util.Collection<Fragment> all() {
+        return java.util.Collections.unmodifiableCollection(FRAGMENTS.values());
     }
 
     // ------------------------------------------------------------------
