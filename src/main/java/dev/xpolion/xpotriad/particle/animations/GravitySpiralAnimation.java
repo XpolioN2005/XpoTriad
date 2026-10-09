@@ -8,13 +8,12 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 
 /**
- * Ground ring at radius 4 with particles spiralling inward toward the
- * center. Animates continuously while the gravity field is active
- * (finite lifetime supplied by ParticleSystem.playPersistent).
+ * Ground ring at the configured radius with particles spiralling inward
+ * toward the center. Animates continuously while the gravity field is
+ * active (finite lifetime supplied by ParticleSystem.playPersistent).
  */
 public final class GravitySpiralAnimation implements ParticleAnimation {
 
-    private static final double RADIUS = 4.0;
     private static final int RING_POINTS = 24;
     private static final int SPIRAL_ARMS = 4;
     private static final double ROTATION_SPEED = 1.5;
@@ -22,6 +21,16 @@ public final class GravitySpiralAnimation implements ParticleAnimation {
 
     private static final Particle.DustOptions DUST_GRAVITY =
             new Particle.DustOptions(Color.fromRGB(150, 90, 255), 1.1f);
+
+    private final double radius;
+
+    public GravitySpiralAnimation(double radius) {
+        if (radius <= 0.0) {
+            throw new IllegalArgumentException("Radius must be positive");
+        }
+
+        this.radius = radius;
+    }
 
     @Override
     public void render(ParticleContext context) {
@@ -41,9 +50,9 @@ public final class GravitySpiralAnimation implements ParticleAnimation {
             double angle = i * ringStep + rotation;
 
             Location particleLoc = origin.clone().add(
-                    Math.cos(angle) * RADIUS,
+                    Math.cos(angle) * radius,
                     0.05,
-                    Math.sin(angle) * RADIUS
+                    Math.sin(angle) * radius
             );
 
             origin.getWorld().spawnParticle(
@@ -60,13 +69,13 @@ public final class GravitySpiralAnimation implements ParticleAnimation {
         for (int arm = 0; arm < SPIRAL_ARMS; arm++) {
             double phase = (elapsed * SPIRAL_CIRCUITS_PER_SECOND
                     + (double) arm / SPIRAL_ARMS) % 1.0;
-            double radius = RADIUS * (1.0 - phase);
+            double armRadius = radius * (1.0 - phase);
             double angle = phase * Math.PI * 4.0 + rotation;
 
             Location particleLoc = origin.clone().add(
-                    Math.cos(angle) * radius,
+                    Math.cos(angle) * armRadius,
                     0.05,
-                    Math.sin(angle) * radius
+                    Math.sin(angle) * armRadius
             );
 
             origin.getWorld().spawnParticle(

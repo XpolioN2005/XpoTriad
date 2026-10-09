@@ -61,7 +61,7 @@ public final class GravityPullState implements RuntimeState {
         this.pullStrength = pullStrength;
 
         this.ringHandle = particleSystem.playPersistent(
-                new GravitySpiralAnimation(),
+                new GravitySpiralAnimation(radius),
                 this.center.clone(),
                 durationTicks / 20.0
         );

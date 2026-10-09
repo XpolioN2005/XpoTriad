@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.targeting.TargetResolver;
 
@@ -19,15 +20,14 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Removes all negative potion effects from the target (immediate, no runtime).
  *
- * Targeting: sight raycast (12 blocks) -> fallback nearest within 3 blocks.
- * Caster is always excluded (multiplayer safe).
+ * Targeting: sight raycast -> fallback nearest within 3 blocks (shared
+ * single-target ranges from config). Caster is always excluded
+ * (multiplayer safe).
  *
  * Visual: villager happy particle burst at the target, radius ~1.5.
  */
 public final class CleanseEffect implements Effect {
 
-    private static final double RAYCAST_RANGE = 12.0;
-    private static final double NEARBY_RADIUS = 3.0;
     private static final double VISUAL_RADIUS = 1.5;
 
     /** Negative status effects removed by the cleanse. */
@@ -48,13 +48,17 @@ public final class CleanseEffect implements Effect {
     public void apply(AbilityContext context) {
         Player source = context.getSource();
 
+        BalanceConfig cfg = BalanceConfig.get();
+        double raycastRange = cfg.singleTargetRaycastRange();
+        double nearbyRadius = cfg.singleTargetNearbyRadius();
+
         LivingEntity target = null;
 
-        List<LivingEntity> raycastTargets = TargetResolver.raycast(source, RAYCAST_RANGE);
+        List<LivingEntity> raycastTargets = TargetResolver.raycast(source, raycastRange);
         if (!raycastTargets.isEmpty()) {
             target = raycastTargets.get(0);
         } else {
-            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), NEARBY_RADIUS, source);
+            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), nearbyRadius, source);
             if (!nearby.isEmpty()) {
                 target = nearby.get(0);
             }

@@ -147,6 +147,7 @@ effects:
   shield:          { duration-ticks: 100, damage-multiplier: 0.6 }  # 0.6 = -40%
   slow_falling:    { potion-duration-ticks: 100, amplifier: 0 }
   smoke_bomb:      { duration-ticks: 100 }
+  weakness:        { potion-duration-ticks: 100, amplifier: 0 }
 
   # ===== UNCOMMON =====
   invisibility:    { potion-duration-ticks: 100, amplifier: 0 }
