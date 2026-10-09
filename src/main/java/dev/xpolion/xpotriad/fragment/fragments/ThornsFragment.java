@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.ThornsEffect;
@@ -27,10 +28,10 @@ public final class ThornsFragment extends Fragment {
                 "thorns",
                 "Thorns Fragment",
                 List.of(Component.text("Returns damage to attackers.", NamedTextColor.GRAY)),
-                10L,
+                BalanceConfig.get().executionTime("thorns", 10L),
                 Rarity.UNCOMMON,
                 Type.MELEE,
-                7L,
+                BalanceConfig.get().cooldownModifier("thorns", 7L),
                 new ThornsEffect()
         );
     }

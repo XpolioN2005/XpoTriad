@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.ability;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.fragment.Fragment;
 
 import java.util.EnumMap;
@@ -7,6 +8,7 @@ import java.util.Map;
 
 public final class Ability {
 
+    /** Fallbacks used only if the balance config is not yet loaded. */
     public static final long BASE_COOLDOWN_TICKS = 20L;
     public static final long MIN_COOLDOWN_TICKS = 0L;
     public static final long MAX_COOLDOWN_TICKS = 300L;
@@ -32,16 +34,23 @@ public final class Ability {
 
     /**
      * Calculates the cooldown for this ability based on base cooldown and Fragment modifiers.
-     * Clamped between MIN_COOLDOWN_TICKS (0) and MAX_COOLDOWN_TICKS (300).
+     * Base/min/max come from the balance config (falling back to the compiled
+     * defaults if it is not yet loaded).
      */
     public long calculateCooldown() {
-        long cooldown = BASE_COOLDOWN_TICKS;
+        BalanceConfig cfg = BalanceConfig.get();
+
+        long base = cfg.baseCooldownTicks();
+        long min = cfg.minCooldownTicks();
+        long max = cfg.maxCooldownTicks();
+
+        long cooldown = base;
         for (Stage stage : Stage.values()) {
             Fragment fragment = fragments.get(stage);
             if (fragment != null) {
                 cooldown += fragment.getCooldownModifier();
             }
         }
-        return Math.clamp(cooldown, MIN_COOLDOWN_TICKS, MAX_COOLDOWN_TICKS);
+        return Math.clamp(cooldown, min, max);
     }
 }

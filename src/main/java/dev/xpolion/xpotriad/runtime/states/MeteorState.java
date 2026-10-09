@@ -28,13 +28,11 @@ import java.util.List;
  */
 public final class MeteorState implements RuntimeState {
 
-    private static final int LIFETIME_TICKS = 40;
-    private static final double AOE_RADIUS = 4.0;
-    private static final double IMPACT_DAMAGE = 20.0;
-    private static final double TRAIL_DURATION_SECONDS = LIFETIME_TICKS / 20.0;
-
     private static final Particle.DustOptions DUST_EMBER =
             new Particle.DustOptions(Color.fromRGB(255, 130, 30), 1.4f);
+
+    private final double aoeRadius;
+    private final double impactDamage;
 
     private final Player source;
     private final LargeFireball fireball;
@@ -42,14 +40,17 @@ public final class MeteorState implements RuntimeState {
     private final ParticleHandle trailHandle;
 
     private Location lastLocation;
-    private int ticksRemaining = LIFETIME_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
     public MeteorState(
             Player source,
             LargeFireball fireball,
             JavaPlugin plugin,
-            ParticleSystem particleSystem
+            ParticleSystem particleSystem,
+            int lifetimeTicks,
+            double aoeRadius,
+            double impactDamage
     ) {
         if (source == null) {
             throw new IllegalArgumentException("Source cannot be null");
@@ -68,11 +69,14 @@ public final class MeteorState implements RuntimeState {
         this.fireball = fireball;
         this.particleSystem = particleSystem;
         this.lastLocation = fireball.getLocation().clone();
+        this.ticksRemaining = lifetimeTicks;
+        this.aoeRadius = aoeRadius;
+        this.impactDamage = impactDamage;
 
         this.trailHandle = particleSystem.playPersistent(
                 new MeteorTrailAnimation(),
                 fireball,
-                TRAIL_DURATION_SECONDS
+                lifetimeTicks / 20.0
         );
     }
 
@@ -107,12 +111,12 @@ public final class MeteorState implements RuntimeState {
         // AOE damage — caster excluded.
         List<LivingEntity> affected = TargetResolver.entitiesNear(
                 lastLocation,
-                AOE_RADIUS,
+                aoeRadius,
                 source
         );
 
         for (LivingEntity entity : affected) {
-            entity.damage(IMPACT_DAMAGE);
+            entity.damage(impactDamage);
         }
 
         // Large expanding fire/smoke/debris burst.

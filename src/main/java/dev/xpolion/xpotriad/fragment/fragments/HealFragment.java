@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.effects.HealEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
@@ -25,10 +26,10 @@ public final class HealFragment extends Fragment {
                 "heal",
                 "Heal Fragment",
                 List.of(Component.text("Grants regeneration.", NamedTextColor.GRAY)),
-                10L,
+                BalanceConfig.get().executionTime("heal", 10L),
                 Rarity.COMMON,
                 Type.MELEE,
-                0L,
+                BalanceConfig.get().cooldownModifier("heal", 0L),
                 new HealEffect()
         );
     }

@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.runtime.states.BarrierState;
 
@@ -26,11 +27,14 @@ import org.bukkit.util.Vector;
  */
 public final class BarrierEffect implements Effect {
 
-    private static final double POINT_RANGE = 15.0;
-
     @Override
     public void apply(AbilityContext context) {
         Player source = context.getSource();
+
+        BalanceConfig cfg = BalanceConfig.get();
+        double pointRange = cfg.pointRange();
+        double radius = cfg.effectDouble("barrier", "radius", 3.0);
+        int durationTicks = cfg.effectInt("barrier", "duration-ticks", 100);
 
         World world = source.getWorld();
         Location eye = source.getEyeLocation();
@@ -41,7 +45,7 @@ public final class BarrierEffect implements Effect {
         RayTraceResult hit = world.rayTraceBlocks(
                 eye,
                 direction,
-                POINT_RANGE,
+                pointRange,
                 FluidCollisionMode.NEVER,
                 true
         );
@@ -49,7 +53,7 @@ public final class BarrierEffect implements Effect {
         if (hit != null && hit.getHitPosition() != null) {
             point = hit.getHitPosition().toLocation(world);
         } else {
-            point = eye.clone().add(direction.clone().multiply(POINT_RANGE));
+            point = eye.clone().add(direction.clone().multiply(pointRange));
         }
 
         Main plugin = JavaPlugin.getPlugin(Main.class);
@@ -58,7 +62,9 @@ public final class BarrierEffect implements Effect {
                 source,
                 point,
                 plugin,
-                plugin.getParticleSystem()
+                plugin.getParticleSystem(),
+                radius,
+                durationTicks
         );
 
         plugin.getRuntimeManager().start(state);

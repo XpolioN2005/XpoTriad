@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.runtime.states.MeteorState;
 
@@ -29,14 +30,16 @@ import org.bukkit.util.Vector;
  */
 public final class MeteorEffect implements Effect {
 
-    private static final double POINT_RANGE = 15.0;
-
-    /** Trajectory speed: crosses the 15-block max range well within 40 ticks. */
-    private static final double LAUNCH_SPEED = 1.5;
-
     @Override
     public void apply(AbilityContext context) {
         Player source = context.getSource();
+
+        BalanceConfig cfg = BalanceConfig.get();
+        double pointRange = cfg.pointRange();
+        double launchSpeed = cfg.effectDouble("meteor", "launch-speed", 1.5);
+        int lifetimeTicks = cfg.effectInt("meteor", "lifetime-ticks", 40);
+        double aoeRadius = cfg.effectDouble("meteor", "aoe-radius", 4.0);
+        double impactDamage = cfg.effectDouble("meteor", "impact-damage", 20.0);
 
         World world = source.getWorld();
         Location eye = source.getEyeLocation();
@@ -47,7 +50,7 @@ public final class MeteorEffect implements Effect {
         RayTraceResult hit = world.rayTraceBlocks(
                 eye,
                 direction,
-                POINT_RANGE,
+                pointRange,
                 FluidCollisionMode.NEVER,
                 true
         );
@@ -55,7 +58,7 @@ public final class MeteorEffect implements Effect {
         if (hit != null && hit.getHitPosition() != null) {
             point = hit.getHitPosition().toLocation(world);
         } else {
-            point = eye.clone().add(direction.clone().multiply(POINT_RANGE));
+            point = eye.clone().add(direction.clone().multiply(pointRange));
         }
 
         Location spawnLoc = eye.clone().add(direction.clone().multiply(1.5));
@@ -63,7 +66,7 @@ public final class MeteorEffect implements Effect {
         Vector velocity = point.toVector()
                 .subtract(spawnLoc.toVector())
                 .normalize()
-                .multiply(LAUNCH_SPEED);
+                .multiply(launchSpeed);
 
         Vector flightDirection = velocity.clone();
 
@@ -81,7 +84,10 @@ public final class MeteorEffect implements Effect {
                 source,
                 fireball,
                 plugin,
-                plugin.getParticleSystem()
+                plugin.getParticleSystem(),
+                lifetimeTicks,
+                aoeRadius,
+                impactDamage
         );
 
         plugin.getRuntimeManager().start(state);

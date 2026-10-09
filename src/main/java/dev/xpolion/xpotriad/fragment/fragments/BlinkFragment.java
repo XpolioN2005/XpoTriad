@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.BlinkEffect;
@@ -27,10 +28,10 @@ public final class BlinkFragment extends Fragment {
                 "blink",
                 "Blink Fragment",
                 List.of(Component.text("Teleports you a short distance.", NamedTextColor.GRAY)),
-                5L,
+                BalanceConfig.get().executionTime("blink", 5L),
                 Rarity.RARE,
                 Type.MELEE,
-                10L,
+                BalanceConfig.get().cooldownModifier("blink", 10L),
                 new BlinkEffect()
         );
     }

@@ -133,8 +133,11 @@ public final class AbilityListener implements Listener {
     /**
      * Attempts to activate the ability on the given item.
      *
-     * <p>The cooldown is applied only after the ability executes without
-     * throwing, so a failed execution does not burn the cooldown.
+     * <p>The cooldown is deferred: it is applied only after every fragment in
+     * the ability has executed (via the engine's completion hook), so the
+     * countdown does not start until the full sequence finishes. The stack is
+     * re-resolved by its ability id at completion, so moving/ swapping the item
+     * mid-sequence still lands the cooldown on the correct slot.
      *
      * @return the resulting state: EMPTY, READY, COOLDOWN or FIRED
      */
@@ -152,10 +155,20 @@ public final class AbilityListener implements Listener {
         }
 
         long cooldownTicks = ability.calculateCooldown();
+        String abilityId = AbilityItem.readAbilityId(item);
 
-        abilityEngine.execute(new AbilityContext(player, ability));
+        Runnable applyDeferredCooldown = () -> {
+            if (!player.isOnline()) {
+                return; // Offline at completion — nothing to write.
+            }
+            ItemStack current = AbilityItem.findByAbilityId(player, abilityId);
+            if (current != null) {
+                AbilityItem.applyCooldown(current, cooldownTicks);
+                player.updateInventory();
+            }
+        };
 
-        AbilityItem.applyCooldown(item, cooldownTicks);
+        abilityEngine.execute(new AbilityContext(player, ability), applyDeferredCooldown);
 
         return ActivationResult.fired();
     }

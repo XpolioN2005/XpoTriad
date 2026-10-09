@@ -18,16 +18,14 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class SmokeBombState implements RuntimeState {
 
-    private static final int DURATION_TICKS = 100;
-    private static final double DURATION_SECONDS = DURATION_TICKS / 20.0;
-
     private final Player target;
     private final ParticleHandle smokeHandle;
 
-    private int ticksRemaining = DURATION_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
-    public SmokeBombState(Player target, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public SmokeBombState(Player target, JavaPlugin plugin, ParticleSystem particleSystem,
+                          int durationTicks) {
         if (target == null) {
             throw new IllegalArgumentException("Target cannot be null");
         }
@@ -39,11 +37,14 @@ public final class SmokeBombState implements RuntimeState {
         }
 
         this.target = target;
+        this.ticksRemaining = durationTicks;
+
+        double durationSeconds = durationTicks / 20.0;
 
         this.smokeHandle = particleSystem.playPersistent(
                 new SmokeCloudAnimation(),
                 target,
-                DURATION_SECONDS
+                durationSeconds
         );
     }
 

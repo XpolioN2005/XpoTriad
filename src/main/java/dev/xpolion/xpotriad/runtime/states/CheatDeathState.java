@@ -22,16 +22,14 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class CheatDeathState implements RuntimeState, Listener {
 
-    private static final int DURATION_TICKS = 40;
-    private static final double AURA_DURATION_SECONDS = DURATION_TICKS / 20.0;
-
     private final Player target;
     private final ParticleHandle auraHandle;
 
-    private int ticksRemaining = DURATION_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
-    public CheatDeathState(Player target, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public CheatDeathState(Player target, JavaPlugin plugin, ParticleSystem particleSystem,
+                           int durationTicks) {
         if (target == null) {
             throw new IllegalArgumentException("Target cannot be null");
         }
@@ -43,11 +41,14 @@ public final class CheatDeathState implements RuntimeState, Listener {
         }
 
         this.target = target;
+        this.ticksRemaining = durationTicks;
+
+        double auraDurationSeconds = durationTicks / 20.0;
 
         this.auraHandle = particleSystem.playPersistent(
                 new CheatDeathSphereAnimation(),
                 target,
-                AURA_DURATION_SECONDS
+                auraDurationSeconds
         );
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);

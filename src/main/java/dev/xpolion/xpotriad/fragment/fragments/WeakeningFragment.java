@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.WeaknessEffect;
@@ -27,10 +28,10 @@ public final class WeakeningFragment extends Fragment {
                 "weakening",
                 "Weakening Fragment",
                 List.of(Component.text("Weakens the target.", NamedTextColor.GRAY)),
-                10L,
+                BalanceConfig.get().executionTime("weakening", 10L),
                 Rarity.COMMON,
                 Type.MELEE,
-                3L,
+                BalanceConfig.get().cooldownModifier("weakening", 3L),
                 new WeaknessEffect()
         );
     }

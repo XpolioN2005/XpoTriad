@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.BarrierEffect;
@@ -27,10 +28,10 @@ public final class BarrierFragment extends Fragment {
                 "barrier",
                 "Barrier Fragment",
                 List.of(Component.text("Creates a temporary boundary.", NamedTextColor.GRAY)),
-                12L,
+                BalanceConfig.get().executionTime("barrier", 12L),
                 Rarity.RARE,
                 Type.MELEE,
-                12L,
+                BalanceConfig.get().cooldownModifier("barrier", 12L),
                 new BarrierEffect()
         );
     }

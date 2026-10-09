@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.LevitationEffect;
@@ -26,10 +27,10 @@ public final class LevitationFragment extends Fragment {
                 "levitation",
                 "Levitation Fragment",
                 List.of(Component.text("Lifts the target into the air.", NamedTextColor.GRAY)),
-                10L,
+                BalanceConfig.get().executionTime("levitation", 10L),
                 Rarity.UNCOMMON,
                 Type.RANGED,
-                6L,
+                BalanceConfig.get().cooldownModifier("levitation", 6L),
                 new LevitationEffect()
         );
     }

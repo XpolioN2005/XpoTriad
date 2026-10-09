@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.runtime.states.SoulLinkState;
 import dev.xpolion.xpotriad.targeting.TargetResolver;
@@ -13,11 +14,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.List;
 
 /**
- * Links caster and target; 30% of qualifying damage transfers between
- * them for 100 ticks.
+ * Links caster and target; a configured ratio of qualifying damage transfers
+ * between them for a configured duration.
  *
- * Targeting: sight raycast (12 blocks) -> fallback nearest within 3 blocks.
- * Caster is always excluded (multiplayer safe).
+ * Targeting: sight raycast -> fallback nearest within the shared nearby
+ * radius. Caster is always excluded (multiplayer safe).
  * Runtime required; ends immediately if either entity becomes invalid.
  *
  * Visual: persistent tether following both entities, with particles
@@ -25,20 +26,23 @@ import java.util.List;
  */
 public final class SoulLinkEffect implements Effect {
 
-    private static final double RAYCAST_RANGE = 12.0;
-    private static final double NEARBY_RADIUS = 3.0;
-
     @Override
     public void apply(AbilityContext context) {
         Player source = context.getSource();
 
+        BalanceConfig cfg = BalanceConfig.get();
+        double raycastRange = cfg.singleTargetRaycastRange();
+        double nearbyRadius = cfg.singleTargetNearbyRadius();
+        int durationTicks = cfg.effectInt("soul_link", "duration-ticks", 100);
+        double transferRatio = cfg.effectDouble("soul_link", "transfer-ratio", 0.3);
+
         LivingEntity target = null;
 
-        List<LivingEntity> raycastTargets = TargetResolver.raycast(source, RAYCAST_RANGE);
+        List<LivingEntity> raycastTargets = TargetResolver.raycast(source, raycastRange);
         if (!raycastTargets.isEmpty()) {
             target = raycastTargets.get(0);
         } else {
-            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), NEARBY_RADIUS, source);
+            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), nearbyRadius, source);
             if (!nearby.isEmpty()) {
                 target = nearby.get(0);
             }
@@ -54,7 +58,9 @@ public final class SoulLinkEffect implements Effect {
                 source,
                 target,
                 plugin,
-                plugin.getParticleSystem()
+                plugin.getParticleSystem(),
+                durationTicks,
+                transferRatio
         );
 
         plugin.getRuntimeManager().start(state);

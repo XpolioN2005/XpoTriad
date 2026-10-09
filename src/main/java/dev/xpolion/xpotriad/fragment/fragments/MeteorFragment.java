@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.MeteorEffect;
@@ -28,10 +29,10 @@ public final class MeteorFragment extends Fragment {
                 "meteor",
                 "Meteor Fragment",
                 List.of(Component.text("Calls down a devastating meteor.", NamedTextColor.GRAY)),
-                20L,
+                BalanceConfig.get().executionTime("meteor", 20L),
                 Rarity.LEGENDARY,
                 Type.RANGED,
-                25L,
+                BalanceConfig.get().cooldownModifier("meteor", 25L),
                 new MeteorEffect()
         );
     }

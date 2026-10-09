@@ -35,8 +35,6 @@ import java.util.UUID;
  */
 public final class ReflectState implements RuntimeState, Listener {
 
-    private static final int DURATION_TICKS = 80;
-
     private static final Particle.DustOptions DUST_GOLD =
             new Particle.DustOptions(Color.fromRGB(255, 215, 0), 1.2f);
 
@@ -44,10 +42,11 @@ public final class ReflectState implements RuntimeState, Listener {
     private final ParticleSystem particleSystem;
     private final Set<UUID> reflectedProjectiles = new HashSet<>();
 
-    private int ticksRemaining = DURATION_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
-    public ReflectState(Player target, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public ReflectState(Player target, JavaPlugin plugin, ParticleSystem particleSystem,
+                        int durationTicks) {
         if (target == null) {
             throw new IllegalArgumentException("Target cannot be null");
         }
@@ -60,6 +59,7 @@ public final class ReflectState implements RuntimeState, Listener {
 
         this.target = target;
         this.particleSystem = particleSystem;
+        this.ticksRemaining = durationTicks;
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }

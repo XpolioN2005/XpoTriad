@@ -25,7 +25,6 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class RewindState implements RuntimeState {
 
-    private static final int TRIGGER_TICKS = 100;
     private static final double RECORDING_VISUAL_SECONDS = 10.0 / 20.0;
 
     private static final Particle.DustOptions DUST_BLUE =
@@ -37,10 +36,13 @@ public final class RewindState implements RuntimeState {
     private final ParticleSystem particleSystem;
     private final ParticleHandle ringsHandle;
 
+    private final int triggerTicks;
+
     private int ticksElapsed = 0;
     private volatile boolean finished = false;
 
-    public RewindState(Player target, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public RewindState(Player target, JavaPlugin plugin, ParticleSystem particleSystem,
+                       int triggerTicks) {
         if (target == null) {
             throw new IllegalArgumentException("Target cannot be null");
         }
@@ -53,6 +55,7 @@ public final class RewindState implements RuntimeState {
 
         this.target = target;
         this.particleSystem = particleSystem;
+        this.triggerTicks = triggerTicks;
 
         // Single capture at the start — that's it.
         this.snapshotLocation = target.getLocation().clone();
@@ -78,7 +81,7 @@ public final class RewindState implements RuntimeState {
 
         ticksElapsed++;
 
-        if (ticksElapsed >= TRIGGER_TICKS) {
+        if (ticksElapsed >= triggerTicks) {
             trigger();
             stop();
         }

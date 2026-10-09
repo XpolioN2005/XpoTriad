@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.MarkEffect;
@@ -28,10 +29,10 @@ public final class MarkFragment extends Fragment {
                         Component.text("Marks a target for 10 seconds."),
                         Component.text("The next damage dealt to the target is multiplied by 1.5x.")
                 ),
-                10L,
+                BalanceConfig.get().executionTime("mark", 10L),
                 Rarity.EPIC,
                 Type.MELEE,
-                30L,
+                BalanceConfig.get().cooldownModifier("mark", 30L),
                 new MarkEffect()
         );
     }

@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.CleanseEffect;
@@ -26,10 +27,10 @@ public final class CleanseFragment extends Fragment {
                 "cleanse",
                 "Cleanse Fragment",
                 List.of(Component.text("Removes negative effects from the target.", NamedTextColor.GRAY)),
-                8L,
+                BalanceConfig.get().executionTime("cleanse", 8L),
                 Rarity.UNCOMMON,
                 Type.MELEE,
-                5L,
+                BalanceConfig.get().cooldownModifier("cleanse", 5L),
                 new CleanseEffect()
         );
     }

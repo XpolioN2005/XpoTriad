@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.targeting.TargetResolver;
 
@@ -25,11 +26,6 @@ import java.util.List;
  */
 public final class KnockbackEffect implements Effect {
 
-    private static final double RAYCAST_RANGE = 12.0;
-    private static final double NEARBY_RADIUS = 3.0;
-    private static final double HORIZONTAL_STRENGTH = 1.5;
-    private static final double VERTICAL_VELOCITY = 0.35;
-
     private static final Particle.DustOptions DUST_WHITE =
             new Particle.DustOptions(Color.WHITE, 1.0f);
 
@@ -37,13 +33,19 @@ public final class KnockbackEffect implements Effect {
     public void apply(AbilityContext context) {
         Player source = context.getSource();
 
+        BalanceConfig cfg = BalanceConfig.get();
+        double raycastRange = cfg.singleTargetRaycastRange();
+        double nearbyRadius = cfg.singleTargetNearbyRadius();
+        double horizontalStrength = cfg.effectDouble("knockback", "horizontal-strength", 1.5);
+        double verticalVelocity = cfg.effectDouble("knockback", "vertical-velocity", 0.35);
+
         LivingEntity target = null;
 
-        List<LivingEntity> raycastTargets = TargetResolver.raycast(source, RAYCAST_RANGE);
+        List<LivingEntity> raycastTargets = TargetResolver.raycast(source, raycastRange);
         if (!raycastTargets.isEmpty()) {
             target = raycastTargets.get(0);
         } else {
-            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), NEARBY_RADIUS, source);
+            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), nearbyRadius, source);
             if (!nearby.isEmpty()) {
                 target = nearby.get(0);
             }
@@ -62,8 +64,8 @@ public final class KnockbackEffect implements Effect {
             away.setY(0.0);
         }
 
-        away.normalize().multiply(HORIZONTAL_STRENGTH);
-        away.setY(VERTICAL_VELOCITY);
+        away.normalize().multiply(horizontalStrength);
+        away.setY(verticalVelocity);
 
         target.setVelocity(away);
 

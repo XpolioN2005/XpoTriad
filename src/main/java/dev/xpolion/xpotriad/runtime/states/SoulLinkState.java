@@ -29,8 +29,7 @@ import org.bukkit.util.Vector;
  */
 public final class SoulLinkState implements RuntimeState, Listener {
 
-    private static final int DURATION_TICKS = 100;
-    private static final double TRANSFER_RATIO = 0.3;
+    private final double transferRatio;
 
     /** Shared synchronous guard — transferred damage never re-transfers. */
     private static volatile boolean transferring = false;
@@ -43,10 +42,11 @@ public final class SoulLinkState implements RuntimeState, Listener {
     private final ParticleSystem particleSystem;
     private final ParticleHandle tetherHandle;
 
-    private int ticksRemaining = DURATION_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
-    public SoulLinkState(Player source, LivingEntity target, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public SoulLinkState(Player source, LivingEntity target, JavaPlugin plugin, ParticleSystem particleSystem,
+                         int durationTicks, double transferRatio) {
         if (source == null) {
             throw new IllegalArgumentException("Source cannot be null");
         }
@@ -63,11 +63,13 @@ public final class SoulLinkState implements RuntimeState, Listener {
         this.source = source;
         this.target = target;
         this.particleSystem = particleSystem;
+        this.transferRatio = transferRatio;
+        this.ticksRemaining = durationTicks;
 
         this.tetherHandle = particleSystem.playPersistent(
                 new SoulTetherAnimation(target),
                 source,
-                DURATION_TICKS / 20.0
+                durationTicks / 20.0
         );
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
@@ -118,7 +120,7 @@ public final class SoulLinkState implements RuntimeState, Listener {
             return;
         }
 
-        double transfer = event.getDamage() * TRANSFER_RATIO;
+        double transfer = event.getDamage() * transferRatio;
 
         if (transfer <= 0.0) {
             return;

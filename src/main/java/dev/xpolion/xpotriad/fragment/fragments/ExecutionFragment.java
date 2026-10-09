@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.ExecutionEffect;
@@ -26,10 +27,10 @@ public final class ExecutionFragment extends Fragment {
                 "execution",
                 "Execution Fragment",
                 List.of(Component.text("Deals bonus damage to weakened targets.", NamedTextColor.GRAY)),
-                5L,
+                BalanceConfig.get().executionTime("execution", 5L),
                 Rarity.RARE,
                 Type.MELEE,
-                8L,
+                BalanceConfig.get().cooldownModifier("execution", 8L),
                 new ExecutionEffect()
         );
     }

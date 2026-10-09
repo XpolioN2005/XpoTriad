@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.targeting.TargetResolver;
 
@@ -27,21 +28,23 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public final class LevitationEffect implements Effect {
 
-    private static final double RAYCAST_RANGE = 12.0;
-    private static final double NEARBY_RADIUS = 3.0;
-    private static final int DURATION_TICKS = 60;
-
     @Override
     public void apply(AbilityContext context) {
         Player source = context.getSource();
 
+        BalanceConfig cfg = BalanceConfig.get();
+        double raycastRange = cfg.singleTargetRaycastRange();
+        double nearbyRadius = cfg.singleTargetNearbyRadius();
+        int durationTicks = cfg.effectInt("levitation", "potion-duration-ticks", 60);
+        int amplifier = cfg.effectInt("levitation", "amplifier", 0);
+
         LivingEntity target = null;
 
-        List<LivingEntity> raycastTargets = TargetResolver.raycast(source, RAYCAST_RANGE);
+        List<LivingEntity> raycastTargets = TargetResolver.raycast(source, raycastRange);
         if (!raycastTargets.isEmpty()) {
             target = raycastTargets.get(0);
         } else {
-            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), NEARBY_RADIUS, source);
+            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), nearbyRadius, source);
             if (!nearby.isEmpty()) {
                 target = nearby.get(0);
             }
@@ -53,8 +56,8 @@ public final class LevitationEffect implements Effect {
 
         target.addPotionEffect(new PotionEffect(
                 PotionEffectType.LEVITATION,
-                DURATION_TICKS,
-                0,
+                durationTicks,
+                amplifier,
                 false,
                 true,
                 true

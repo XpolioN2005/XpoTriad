@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.SoulLinkEffect;
@@ -28,10 +29,10 @@ public final class SoulLinkFragment extends Fragment {
                 "soul_link",
                 "Soul Link Fragment",
                 List.of(Component.text("Links you to the target and shares damage.", NamedTextColor.GRAY)),
-                12L,
+                BalanceConfig.get().executionTime("soul_link", 12L),
                 Rarity.EPIC,
                 Type.MELEE,
-                15L,
+                BalanceConfig.get().cooldownModifier("soul_link", 15L),
                 new SoulLinkEffect()
         );
     }

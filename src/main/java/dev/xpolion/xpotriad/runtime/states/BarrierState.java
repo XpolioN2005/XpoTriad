@@ -28,19 +28,18 @@ import java.util.List;
  */
 public final class BarrierState implements RuntimeState {
 
-    private static final double RADIUS = 3.0;
-    private static final int DURATION_TICKS = 100;
-    private static final double RING_DURATION_SECONDS = DURATION_TICKS / 20.0;
+    private final double radius;
 
     private final Player source;
     private final Location center;
     private final List<LivingEntity> inside = new ArrayList<>();
     private final ParticleHandle ringHandle;
 
-    private int ticksRemaining = DURATION_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
-    public BarrierState(Player source, Location center, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public BarrierState(Player source, Location center, JavaPlugin plugin, ParticleSystem particleSystem,
+                        double radius, int durationTicks) {
         if (source == null) {
             throw new IllegalArgumentException("Source cannot be null");
         }
@@ -56,14 +55,18 @@ public final class BarrierState implements RuntimeState {
 
         this.source = source;
         this.center = center.clone();
+        this.radius = radius;
+        this.ticksRemaining = durationTicks;
 
         // Capture the entities currently inside the boundary (caster excluded).
-        this.inside.addAll(TargetResolver.entitiesNear(this.center, RADIUS, source));
+        this.inside.addAll(TargetResolver.entitiesNear(this.center, radius, source));
+
+        double ringDurationSeconds = durationTicks / 20.0;
 
         this.ringHandle = particleSystem.playPersistent(
                 new BarrierRingAnimation(),
                 this.center.clone(),
-                RING_DURATION_SECONDS
+                ringDurationSeconds
         );
     }
 
@@ -94,10 +97,10 @@ public final class BarrierState implements RuntimeState {
             double dz = entity.getLocation().getZ() - center.getZ();
             double distanceSquared = dx * dx + dz * dz;
 
-            if (distanceSquared > RADIUS * RADIUS) {
+            if (distanceSquared > radius * radius) {
                 // Clamp back onto the boundary circle (keep entity height).
                 double distance = Math.sqrt(distanceSquared);
-                double scale = RADIUS / distance;
+                double scale = radius / distance;
 
                 Location clamped = entity.getLocation().clone();
                 clamped.setX(center.getX() + dx * scale);

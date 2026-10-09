@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.runtime.states.HoundCallState;
 
@@ -25,23 +26,25 @@ import java.util.List;
  */
 public final class HoundCallEffect implements Effect {
 
-    private static final int WOLF_COUNT = 5;
-    private static final double SUMMON_RING_RADIUS = 1.5;
-
     @Override
     public void apply(AbilityContext context) {
         Player source = context.getSource();
 
-        Location base = source.getLocation();
-        List<Wolf> wolves = new ArrayList<>(WOLF_COUNT);
+        BalanceConfig cfg = BalanceConfig.get();
+        int wolfCount = Math.max(cfg.effectInt("hound_call", "count", 5), 1);
+        double summonRingRadius = cfg.effectDouble("hound_call", "summon-ring-radius", 1.5);
+        int lifetimeTicks = cfg.effectInt("hound_call", "lifetime-ticks", 200);
 
-        for (int i = 0; i < WOLF_COUNT; i++) {
-            double angle = (double) i / WOLF_COUNT * Math.PI * 2.0;
+        Location base = source.getLocation();
+        List<Wolf> wolves = new ArrayList<>(wolfCount);
+
+        for (int i = 0; i < wolfCount; i++) {
+            double angle = (double) i / wolfCount * Math.PI * 2.0;
 
             Location summonPos = base.clone().add(
-                    Math.cos(angle) * SUMMON_RING_RADIUS,
+                    Math.cos(angle) * summonRingRadius,
                     0.0,
-                    Math.sin(angle) * SUMMON_RING_RADIUS
+                    Math.sin(angle) * summonRingRadius
             );
 
             Wolf wolf = source.getWorld().spawn(summonPos, Wolf.class, summoned -> {
@@ -55,13 +58,13 @@ public final class HoundCallEffect implements Effect {
         Main plugin = JavaPlugin.getPlugin(Main.class);
 
         // Small smoke/dust burst at each summon position.
-        for (int i = 0; i < WOLF_COUNT; i++) {
-            double angle = (double) i / WOLF_COUNT * Math.PI * 2.0;
+        for (int i = 0; i < wolfCount; i++) {
+            double angle = (double) i / wolfCount * Math.PI * 2.0;
 
             Location burstPos = base.clone().add(
-                    Math.cos(angle) * SUMMON_RING_RADIUS,
+                    Math.cos(angle) * summonRingRadius,
                     0.5,
-                    Math.sin(angle) * SUMMON_RING_RADIUS
+                    Math.sin(angle) * summonRingRadius
             );
 
             plugin.getParticleSystem().play(animationContext -> {
@@ -82,7 +85,8 @@ public final class HoundCallEffect implements Effect {
         HoundCallState state = new HoundCallState(
                 source,
                 wolves,
-                plugin
+                plugin,
+                lifetimeTicks
         );
 
         plugin.getRuntimeManager().start(state);

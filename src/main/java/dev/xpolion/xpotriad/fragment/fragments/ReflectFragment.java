@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.ReflectEffect;
@@ -29,10 +30,10 @@ public final class ReflectFragment extends Fragment {
                 "reflect",
                 "Reflect Fragment",
                 List.of(Component.text("Reflects incoming attacks.", NamedTextColor.GRAY)),
-                10L,
+                BalanceConfig.get().executionTime("reflect", 10L),
                 Rarity.EPIC,
                 Type.MELEE,
-                14L,
+                BalanceConfig.get().cooldownModifier("reflect", 14L),
                 new ReflectEffect()
         );
     }

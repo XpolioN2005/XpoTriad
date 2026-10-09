@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.RewindEffect;
@@ -28,10 +29,10 @@ public final class RewindFragment extends Fragment {
                 "rewind",
                 "Rewind Fragment",
                 List.of(Component.text("Reverts you to a previous state.", NamedTextColor.GRAY)),
-                15L,
+                BalanceConfig.get().executionTime("rewind", 15L),
                 Rarity.LEGENDARY,
                 Type.MELEE,
-                20L,
+                BalanceConfig.get().cooldownModifier("rewind", 20L),
                 new RewindEffect()
         );
     }

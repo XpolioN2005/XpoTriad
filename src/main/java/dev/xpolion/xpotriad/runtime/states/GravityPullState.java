@@ -25,21 +25,20 @@ import java.util.List;
  */
 public final class GravityPullState implements RuntimeState {
 
-    private static final double RADIUS = 4.0;
-    private static final int DURATION_TICKS = 60;
-    private static final int PULL_INTERVAL_TICKS = 5;
-    private static final double PULL_STRENGTH = 0.35;
-    private static final double RING_DURATION_SECONDS = DURATION_TICKS / 20.0;
+    private final double radius;
+    private final int pullIntervalTicks;
+    private final double pullStrength;
 
     private final Player source;
     private final Location center;
     private final ParticleHandle ringHandle;
 
-    private int ticksRemaining = DURATION_TICKS;
-    private int ticksUntilPull = PULL_INTERVAL_TICKS;
+    private int ticksRemaining;
+    private int ticksUntilPull;
     private volatile boolean finished = false;
 
-    public GravityPullState(Player source, Location center, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public GravityPullState(Player source, Location center, JavaPlugin plugin, ParticleSystem particleSystem,
+                            double radius, int durationTicks, int pullIntervalTicks, double pullStrength) {
         if (source == null) {
             throw new IllegalArgumentException("Source cannot be null");
         }
@@ -55,11 +54,16 @@ public final class GravityPullState implements RuntimeState {
 
         this.source = source;
         this.center = center.clone();
+        this.radius = radius;
+        this.ticksRemaining = durationTicks;
+        this.pullIntervalTicks = Math.max(pullIntervalTicks, 1);
+        this.ticksUntilPull = this.pullIntervalTicks;
+        this.pullStrength = pullStrength;
 
         this.ringHandle = particleSystem.playPersistent(
                 new GravitySpiralAnimation(),
                 this.center.clone(),
-                RING_DURATION_SECONDS
+                durationTicks / 20.0
         );
     }
 
@@ -79,13 +83,13 @@ public final class GravityPullState implements RuntimeState {
         ticksUntilPull--;
 
         if (ticksUntilPull <= 0) {
-            ticksUntilPull = PULL_INTERVAL_TICKS;
+            ticksUntilPull = pullIntervalTicks;
             pull();
         }
     }
 
     private void pull() {
-        List<LivingEntity> entities = TargetResolver.entitiesNear(center, RADIUS, source);
+        List<LivingEntity> entities = TargetResolver.entitiesNear(center, radius, source);
 
         Vector pullBase = center.clone().add(0, 1.0, 0).toVector();
 
@@ -96,7 +100,7 @@ public final class GravityPullState implements RuntimeState {
                 continue;
             }
 
-            pull.normalize().multiply(PULL_STRENGTH);
+            pull.normalize().multiply(pullStrength);
             entity.setVelocity(entity.getVelocity().add(pull));
         }
     }

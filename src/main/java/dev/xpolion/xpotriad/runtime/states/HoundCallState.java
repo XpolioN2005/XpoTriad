@@ -18,15 +18,13 @@ import java.util.List;
  */
 public final class HoundCallState implements RuntimeState {
 
-    private static final int LIFETIME_TICKS = 200;
-
     private final Player source;
     private final List<Wolf> wolves;
 
-    private int ticksRemaining = LIFETIME_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
-    public HoundCallState(Player source, List<Wolf> wolves, JavaPlugin plugin) {
+    public HoundCallState(Player source, List<Wolf> wolves, JavaPlugin plugin, int lifetimeTicks) {
         if (source == null) {
             throw new IllegalArgumentException("Source cannot be null");
         }
@@ -39,6 +37,7 @@ public final class HoundCallState implements RuntimeState {
 
         this.source = source;
         this.wolves = new ArrayList<>(wolves);
+        this.ticksRemaining = lifetimeTicks;
     }
 
     @Override

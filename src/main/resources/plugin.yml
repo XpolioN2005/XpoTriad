@@ -4,7 +4,11 @@ main: dev.xpolion.xpotriad.Main
 api-version: "26.3"
 
 commands:
-  xptest:
-    description: Test XpoTriad ability system
-  xpbind:
-    description: Open the EtchLoom GUI
+  xpt:
+    description: XpoTriad dispatcher (reload / test / bind / help)
+    usage: /xpt <reload|test|bind|help>
+
+permissions:
+  xpotriad.admin:
+    description: Allows reloading the XpoTriad balance config
+    default: op

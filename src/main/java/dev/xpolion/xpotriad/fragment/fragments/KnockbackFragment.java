@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.KnockbackEffect;
@@ -27,10 +28,10 @@ public final class KnockbackFragment extends Fragment {
                 "knockback",
                 "Knockback Fragment",
                 List.of(Component.text("Blasts the target backward.", NamedTextColor.GRAY)),
-                5L,
+                BalanceConfig.get().executionTime("knockback", 5L),
                 Rarity.COMMON,
                 Type.MELEE,
-                2L,
+                BalanceConfig.get().cooldownModifier("knockback", 2L),
                 new KnockbackEffect()
         );
     }

@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.runtime.states.LineSnipeState;
 
@@ -31,12 +32,17 @@ public final class LineSnipeEffect implements Effect {
 
         Main plugin = JavaPlugin.getPlugin(Main.class);
 
+        BalanceConfig cfg = BalanceConfig.get();
+
         LineSnipeState state = new LineSnipeState(
                 source,
                 origin,
                 direction,
                 plugin,
-                plugin.getParticleSystem()
+                plugin.getParticleSystem(),
+                cfg.effectDouble("line_snipe", "max-distance", 30.0),
+                cfg.effectInt("line_snipe", "lifetime-ticks", 20),
+                cfg.effectDouble("line_snipe", "damage", 8.0)
         );
 
         plugin.getRuntimeManager().start(state);

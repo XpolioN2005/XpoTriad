@@ -16,18 +16,20 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class MarkState implements RuntimeState, Listener {
 
-    private static final double DURATION_SECONDS = 10.0;
     private static final double TICK_DELTA_SECONDS = 0.05;
-    private static final double DAMAGE_MULTIPLIER = 1.5;
 
     private final LivingEntity target;
     private final ParticleSystem particleSystem;
     private final ParticleHandle particleHandle;
 
-    private double remainingSeconds = DURATION_SECONDS;
+    private final double durationSeconds;
+    private final double damageMultiplier;
+
+    private double remainingSeconds;
     private volatile boolean finished = false;
 
-    public MarkState(LivingEntity target, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public MarkState(LivingEntity target, JavaPlugin plugin, ParticleSystem particleSystem,
+                     double durationSeconds, double damageMultiplier) {
         if (target == null) {
             throw new IllegalArgumentException("Target cannot be null");
         }
@@ -40,11 +42,14 @@ public final class MarkState implements RuntimeState, Listener {
 
         this.target = target;
         this.particleSystem = particleSystem;
+        this.durationSeconds = durationSeconds;
+        this.damageMultiplier = damageMultiplier;
+        this.remainingSeconds = durationSeconds;
 
         this.particleHandle = particleSystem.playPersistent(
                 new MarkAnimation(),
                 target,
-                DURATION_SECONDS
+                durationSeconds
         );
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
@@ -74,7 +79,7 @@ public final class MarkState implements RuntimeState, Listener {
         }
 
         if (event.getEntity().equals(target)) {
-            event.setDamage(event.getDamage() * DAMAGE_MULTIPLIER);
+            event.setDamage(event.getDamage() * damageMultiplier);
             particleSystem.play(new MarkBurstAnimation(), target.getLocation());
             stop();
         }

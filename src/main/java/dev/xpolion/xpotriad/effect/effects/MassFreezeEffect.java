@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.runtime.states.MassFreezeState;
 import dev.xpolion.xpotriad.targeting.TargetResolver;
@@ -29,12 +30,14 @@ import java.util.List;
  */
 public final class MassFreezeEffect implements Effect {
 
-    private static final double POINT_RANGE = 15.0;
-    private static final double AREA_RADIUS = 5.0;
-
     @Override
     public void apply(AbilityContext context) {
         Player source = context.getSource();
+
+        BalanceConfig cfg = BalanceConfig.get();
+        double pointRange = cfg.pointRange();
+        double areaRadius = cfg.effectDouble("mass_freeze", "area-radius", 5.0);
+        int durationTicks = cfg.effectInt("mass_freeze", "duration-ticks", 60);
 
         World world = source.getWorld();
         Location eye = source.getEyeLocation();
@@ -45,7 +48,7 @@ public final class MassFreezeEffect implements Effect {
         RayTraceResult hit = world.rayTraceBlocks(
                 eye,
                 direction,
-                POINT_RANGE,
+                pointRange,
                 FluidCollisionMode.NEVER,
                 true
         );
@@ -53,10 +56,10 @@ public final class MassFreezeEffect implements Effect {
         if (hit != null && hit.getHitPosition() != null) {
             point = hit.getHitPosition().toLocation(world);
         } else {
-            point = eye.clone().add(direction.clone().multiply(POINT_RANGE));
+            point = eye.clone().add(direction.clone().multiply(pointRange));
         }
 
-        List<LivingEntity> frozen = TargetResolver.entitiesNear(point, AREA_RADIUS, source);
+        List<LivingEntity> frozen = TargetResolver.entitiesNear(point, areaRadius, source);
 
         if (frozen.isEmpty()) {
             return; // Nothing to freeze — no runtime, no visuals.
@@ -69,7 +72,8 @@ public final class MassFreezeEffect implements Effect {
                 point,
                 frozen,
                 plugin,
-                plugin.getParticleSystem()
+                plugin.getParticleSystem(),
+                durationTicks
         );
 
         plugin.getRuntimeManager().start(state);

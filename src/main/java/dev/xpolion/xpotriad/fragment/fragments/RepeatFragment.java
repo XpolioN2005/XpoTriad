@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.RepeatEffect;
@@ -28,10 +29,10 @@ public final class RepeatFragment extends Fragment {
                 "repeat",
                 "Repeat Fragment",
                 List.of(Component.text("Repeats the previous fragment.", NamedTextColor.GRAY)),
-                5L,
+                BalanceConfig.get().executionTime("repeat", 5L),
                 Rarity.LEGENDARY,
                 Type.MELEE,
-                15L,
+                BalanceConfig.get().cooldownModifier("repeat", 15L),
                 new RepeatEffect()
         );
     }

@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.SwapEffect;
@@ -26,10 +27,10 @@ public final class SwapFragment extends Fragment {
                 "swap",
                 "Swap Fragment",
                 List.of(Component.text("Swaps your position with the target.", NamedTextColor.GRAY)),
-                8L,
+                BalanceConfig.get().executionTime("swap", 8L),
                 Rarity.EPIC,
                 Type.MELEE,
-                14L,
+                BalanceConfig.get().cooldownModifier("swap", 14L),
                 new SwapEffect()
         );
     }

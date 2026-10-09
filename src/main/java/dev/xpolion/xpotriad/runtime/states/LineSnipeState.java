@@ -29,11 +29,12 @@ import java.util.List;
  */
 public final class LineSnipeState implements RuntimeState {
 
-    private static final double MAX_DISTANCE = 30.0;
-    private static final int LIFETIME_TICKS = 20;
-    private static final double SPEED = MAX_DISTANCE / LIFETIME_TICKS;
-    private static final double DAMAGE = 8.0;
     private static final double TRAIL_THRESHOLD = 1.0E-6;
+
+    private final double maxDistance;
+    private final int lifetimeTicks;
+    private final double speed;
+    private final double damage;
 
     private final Player source;
     private final World world;
@@ -50,7 +51,10 @@ public final class LineSnipeState implements RuntimeState {
             Location origin,
             Vector direction,
             JavaPlugin plugin,
-            ParticleSystem particleSystem
+            ParticleSystem particleSystem,
+            double maxDistance,
+            int lifetimeTicks,
+            double damage
     ) {
         if (source == null) {
             throw new IllegalArgumentException("Source cannot be null");
@@ -73,6 +77,10 @@ public final class LineSnipeState implements RuntimeState {
         this.direction = direction.clone().normalize();
         this.position = origin.clone();
         this.particleSystem = particleSystem;
+        this.maxDistance = maxDistance;
+        this.lifetimeTicks = Math.max(lifetimeTicks, 1);
+        this.speed = maxDistance / this.lifetimeTicks;
+        this.damage = damage;
     }
 
     @Override
@@ -88,12 +96,12 @@ public final class LineSnipeState implements RuntimeState {
 
         ticksElapsed++;
 
-        if (ticksElapsed > LIFETIME_TICKS) {
+        if (ticksElapsed > lifetimeTicks) {
             stop();
             return;
         }
 
-        double step = Math.min(SPEED, MAX_DISTANCE - travelled);
+        double step = Math.min(speed, maxDistance - travelled);
 
         if (step <= TRAIL_THRESHOLD) {
             stop();
@@ -151,7 +159,7 @@ public final class LineSnipeState implements RuntimeState {
 
         if (!hits.isEmpty()) {
             LivingEntity first = hits.get(0);
-            first.damage(DAMAGE);
+            first.damage(damage);
 
             // Small sharp impact burst on the hit.
             particleSystem.play(animationContext -> {
@@ -178,7 +186,7 @@ public final class LineSnipeState implements RuntimeState {
 
         boolean hitWall = segmentLength < step - TRAIL_THRESHOLD;
 
-        if (travelled >= MAX_DISTANCE - TRAIL_THRESHOLD || hitWall) {
+        if (travelled >= maxDistance - TRAIL_THRESHOLD || hitWall) {
             stop();
         }
     }

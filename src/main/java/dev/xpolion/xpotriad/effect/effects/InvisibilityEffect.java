@@ -1,6 +1,7 @@
 package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 
 import org.bukkit.potion.PotionEffect;
@@ -10,11 +11,15 @@ public final class InvisibilityEffect implements Effect {
 
     @Override
     public void apply(AbilityContext context) {
+        BalanceConfig cfg = BalanceConfig.get();
+        int duration = cfg.effectInt("invisibility", "potion-duration-ticks", 100);
+        int amplifier = cfg.effectInt("invisibility", "amplifier", 0);
+
         context.getSource().addPotionEffect(
             new PotionEffect(
                 PotionEffectType.INVISIBILITY,
-                100,
-                0,
+                duration,
+                amplifier,
                 false,
                 false,
                 false

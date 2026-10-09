@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.ShieldEffect;
@@ -27,10 +28,10 @@ public final class ShieldFragment extends Fragment {
                 "shield",
                 "Shield Fragment",
                 List.of(Component.text("Temporarily reduces incoming damage.", NamedTextColor.GRAY)),
-                10L,
+                BalanceConfig.get().executionTime("shield", 10L),
                 Rarity.COMMON,
                 Type.MELEE,
-                6L,
+                BalanceConfig.get().cooldownModifier("shield", 6L),
                 new ShieldEffect()
         );
     }

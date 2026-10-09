@@ -28,8 +28,7 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class ThornsState implements RuntimeState, Listener {
 
-    private static final int DURATION_TICKS = 100;
-    private static final double REFLECT_RATIO = 0.3;
+    private final double reflectRatio;
 
     /** Shared synchronous guard — Bukkit events run on one thread. */
     private static volatile boolean reflecting = false;
@@ -42,10 +41,11 @@ public final class ThornsState implements RuntimeState, Listener {
     private final Player target;
     private final ParticleSystem particleSystem;
 
-    private int ticksRemaining = DURATION_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
-    public ThornsState(Player target, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public ThornsState(Player target, JavaPlugin plugin, ParticleSystem particleSystem,
+                       int durationTicks, double reflectRatio) {
         if (target == null) {
             throw new IllegalArgumentException("Target cannot be null");
         }
@@ -58,6 +58,8 @@ public final class ThornsState implements RuntimeState, Listener {
 
         this.target = target;
         this.particleSystem = particleSystem;
+        this.reflectRatio = reflectRatio;
+        this.ticksRemaining = durationTicks;
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -103,7 +105,7 @@ public final class ThornsState implements RuntimeState, Listener {
             return;
         }
 
-        double reflectAmount = event.getDamage() * REFLECT_RATIO;
+        double reflectAmount = event.getDamage() * reflectRatio;
 
         if (reflectAmount <= 0.0) {
             return;

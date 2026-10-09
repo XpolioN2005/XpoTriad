@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.LineSnipeEffect;
@@ -27,10 +28,10 @@ public final class LineSnipeFragment extends Fragment {
                 "line_snipe",
                 "Line Snipe Fragment",
                 List.of(Component.text("Fires a piercing shot at the first target in line.", NamedTextColor.GRAY)),
-                8L,
+                BalanceConfig.get().executionTime("line_snipe", 8L),
                 Rarity.RARE,
                 Type.RANGED,
-                10L,
+                BalanceConfig.get().cooldownModifier("line_snipe", 10L),
                 new LineSnipeEffect()
         );
     }

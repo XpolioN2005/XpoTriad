@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.DelayEffect;
@@ -28,10 +29,10 @@ public final class DelayFragment extends Fragment {
                 "delay",
                 "Delay Fragment",
                 List.of(Component.text("Delays the next stage.", NamedTextColor.GRAY)),
-                20L,
+                BalanceConfig.get().executionTime("delay", 20L),
                 Rarity.COMMON,
                 Type.MELEE,
-                0L,
+                BalanceConfig.get().cooldownModifier("delay", 0L),
                 new DelayEffect()
         );
     }

@@ -6,7 +6,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -198,6 +200,61 @@ public final class AbilityItem {
                 pdc.get(itemTypeKey, PersistentDataType.STRING);
 
         return ABILITY_MARKER.equals(itemType);
+    }
+
+    // ------------------------------------------------------------------
+    // Ability identity (used to re-resolve a stack for deferred cooldown)
+    // ------------------------------------------------------------------
+
+    /** Returns the ability id PDC value, or null if the item is not an ability. */
+    public static String readAbilityId(ItemStack item) {
+        if (!isAbilityItem(item)) {
+            return null;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+
+        if (meta == null) {
+            return null;
+        }
+
+        return meta.getPersistentDataContainer().get(
+                abilityIdKey,
+                PersistentDataType.STRING
+        );
+    }
+
+    /**
+     * Finds the live inventory stack carrying the given ability id.
+     *
+     * <p>Checks main hand, off hand, then the full inventory (storage +
+     * armor + extra). Returns the live reference so a cooldown write persists;
+     * returns null when no matching stack is currently held.
+     */
+    public static ItemStack findByAbilityId(Player player, String abilityId) {
+        if (player == null || abilityId == null) {
+            return null;
+        }
+
+        PlayerInventory inventory = player.getInventory();
+
+        ItemStack mainHand = inventory.getItemInMainHand();
+        if (abilityId.equals(readAbilityId(mainHand))) {
+            return mainHand;
+        }
+
+        ItemStack offHand = inventory.getItemInOffHand();
+        if (abilityId.equals(readAbilityId(offHand))) {
+            return offHand;
+        }
+
+        for (ItemStack stack : inventory.getContents()) {
+            if (stack != null && abilityId.equals(readAbilityId(stack))) {
+                return stack;
+            }
+        }
+
+        return null;
     }
 
     // -------------------------------------------------------------------------

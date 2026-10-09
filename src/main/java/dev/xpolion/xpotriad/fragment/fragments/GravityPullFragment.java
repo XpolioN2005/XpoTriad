@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.GravityPullEffect;
@@ -27,10 +28,10 @@ public final class GravityPullFragment extends Fragment {
                 "gravity_pull",
                 "Gravity Pull Fragment",
                 List.of(Component.text("Pulls nearby enemies toward a point.", NamedTextColor.GRAY)),
-                15L,
+                BalanceConfig.get().executionTime("gravity_pull", 15L),
                 Rarity.RARE,
                 Type.MELEE,
-                12L,
+                BalanceConfig.get().cooldownModifier("gravity_pull", 12L),
                 new GravityPullEffect()
         );
     }

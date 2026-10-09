@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.targeting.TargetResolver;
 
@@ -27,11 +28,6 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public final class ExecutionEffect implements Effect {
 
-    private static final double RAYCAST_RANGE = 12.0;
-    private static final double NEARBY_RADIUS = 3.0;
-    private static final double HEALTH_THRESHOLD_RATIO = 0.25;
-    private static final double BONUS_DAMAGE = 10.0;
-
     private static final Particle.DustOptions DUST_DARK_RED =
             new Particle.DustOptions(Color.fromRGB(120, 0, 0), 1.4f);
 
@@ -39,13 +35,19 @@ public final class ExecutionEffect implements Effect {
     public void apply(AbilityContext context) {
         Player source = context.getSource();
 
+        BalanceConfig cfg = BalanceConfig.get();
+        double raycastRange = cfg.singleTargetRaycastRange();
+        double nearbyRadius = cfg.singleTargetNearbyRadius();
+        double thresholdRatio = cfg.effectDouble("execution", "health-threshold-ratio", 0.25);
+        double bonusDamage = cfg.effectDouble("execution", "bonus-damage", 10.0);
+
         LivingEntity target = null;
 
-        List<LivingEntity> raycastTargets = TargetResolver.raycast(source, RAYCAST_RANGE);
+        List<LivingEntity> raycastTargets = TargetResolver.raycast(source, raycastRange);
         if (!raycastTargets.isEmpty()) {
             target = raycastTargets.get(0);
         } else {
-            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), NEARBY_RADIUS, source);
+            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), nearbyRadius, source);
             if (!nearby.isEmpty()) {
                 target = nearby.get(0);
             }
@@ -57,13 +59,13 @@ public final class ExecutionEffect implements Effect {
 
         var maxHealthAttribute = target.getAttribute(Attribute.MAX_HEALTH);
         double maxHealth = maxHealthAttribute != null ? maxHealthAttribute.getValue() : 20.0;
-        double threshold = maxHealth * HEALTH_THRESHOLD_RATIO;
+        double threshold = maxHealth * thresholdRatio;
 
         if (target.getHealth() > threshold) {
             return; // Target is healthy — no bonus damage, no visual.
         }
 
-        target.damage(BONUS_DAMAGE);
+        target.damage(bonusDamage);
 
         // Dark/red concentrated burst + short outward spray on the target.
         Main plugin = JavaPlugin.getPlugin(Main.class);

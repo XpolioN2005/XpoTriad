@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.SmokeBombEffect;
@@ -27,10 +28,10 @@ public final class SmokeBombFragment extends Fragment {
                 "smoke_bomb",
                 "Smoke Bomb Fragment",
                 List.of(Component.text("Creates a temporary cloud of smoke.", NamedTextColor.GRAY)),
-                10L,
+                BalanceConfig.get().executionTime("smoke_bomb", 10L),
                 Rarity.COMMON,
                 Type.MELEE,
-                6L,
+                BalanceConfig.get().cooldownModifier("smoke_bomb", 6L),
                 new SmokeBombEffect()
         );
     }

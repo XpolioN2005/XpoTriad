@@ -1,6 +1,7 @@
 package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.targeting.TargetResolver;
 import org.bukkit.Location;
@@ -17,20 +18,21 @@ import java.util.List;
  */
 public final class ExplosionEffect implements Effect {
 
-    private static final double EXPLOSION_RADIUS = 4.0;
-    private static final float EXPLOSION_POWER = 4.0f;
-
     @Override
     public void apply(AbilityContext context) {
         Player source = context.getSource();
         Location explosionLocation = source.getLocation();
 
+        BalanceConfig cfg = BalanceConfig.get();
+        double radius = cfg.effectDouble("explosion", "radius", 4.0);
+        float power = cfg.effectFloat("explosion", "power", 4.0f);
+
         // Query entities in the explosion area using TargetResolver (excluding source)
-        List<LivingEntity> affected = TargetResolver.entitiesNear(explosionLocation, EXPLOSION_RADIUS, source);
+        List<LivingEntity> affected = TargetResolver.entitiesNear(explosionLocation, radius, source);
 
         explosionLocation.getWorld().createExplosion(
                 explosionLocation,
-                EXPLOSION_POWER,
+                power,
                 false,
                 false,
                 source

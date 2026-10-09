@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.HoundCallEffect;
@@ -27,10 +28,10 @@ public final class HoundCallFragment extends Fragment {
                 "hound_call",
                 "Hound Call Fragment",
                 List.of(Component.text("Summons spectral hunting hounds.", NamedTextColor.GRAY)),
-                15L,
+                BalanceConfig.get().executionTime("hound_call", 15L),
                 Rarity.EPIC,
                 Type.MELEE,
-                15L,
+                BalanceConfig.get().cooldownModifier("hound_call", 15L),
                 new HoundCallEffect()
         );
     }

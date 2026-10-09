@@ -89,6 +89,22 @@ public final class FragmentRegistry {
     private static final Map<String, SourceRule> PREFIX_RULES = new HashMap<>();
 
     static {
+        reload();
+    }
+
+    /**
+     * Rebuilds every fragment (reading its timing from the balance config) and
+     * re-applies the hardcoded loot rules. Safe to call repeatedly — used on
+     * enable and on {@code /xpt reload}.
+     *
+     * <p>Loot rules are intentionally NOT configurable; they are rebuilt
+     * identically each time.
+     */
+    public static void reload() {
+        FRAGMENTS.clear();
+        EXACT_RULES.clear();
+        PREFIX_RULES.clear();
+
         register(new InvisibilityFragment());
         register(new SpeedFragment());
         register(new HealFragment());

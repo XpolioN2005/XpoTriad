@@ -63,7 +63,7 @@ public final class EtchLoom {
     }
 
     public EtchLoom(Plugin plugin) {
-        this(plugin, "xptest");
+        this(plugin, "XpoTriad");
     }
 
     public void open(Player player) {

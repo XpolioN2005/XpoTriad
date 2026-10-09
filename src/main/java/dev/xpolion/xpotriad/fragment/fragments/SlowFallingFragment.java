@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.SlowFallingEffect;
@@ -27,10 +28,10 @@ public final class SlowFallingFragment extends Fragment {
                 "slow_falling",
                 "Slow Falling Fragment",
                 List.of(Component.text("Slows the target's fall.", NamedTextColor.GRAY)),
-                10L,
+                BalanceConfig.get().executionTime("slow_falling", 10L),
                 Rarity.COMMON,
                 Type.RANGED,
-                3L,
+                BalanceConfig.get().cooldownModifier("slow_falling", 3L),
                 new SlowFallingEffect()
         );
     }

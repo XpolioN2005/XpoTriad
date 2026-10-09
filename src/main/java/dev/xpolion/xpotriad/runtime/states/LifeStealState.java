@@ -28,8 +28,7 @@ import org.bukkit.util.Vector;
  */
 public final class LifeStealState implements RuntimeState, Listener {
 
-    private static final int DURATION_TICKS = 100;
-    private static final double HEAL_RATIO = 0.25;
+    private final double healRatio;
 
     private static final Particle.DustOptions DUST_RED =
             new Particle.DustOptions(Color.RED, 1.1f);
@@ -37,10 +36,11 @@ public final class LifeStealState implements RuntimeState, Listener {
     private final Player target;
     private final ParticleSystem particleSystem;
 
-    private int ticksRemaining = DURATION_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
-    public LifeStealState(Player target, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public LifeStealState(Player target, JavaPlugin plugin, ParticleSystem particleSystem,
+                          int durationTicks, double healRatio) {
         if (target == null) {
             throw new IllegalArgumentException("Target cannot be null");
         }
@@ -53,6 +53,8 @@ public final class LifeStealState implements RuntimeState, Listener {
 
         this.target = target;
         this.particleSystem = particleSystem;
+        this.healRatio = healRatio;
+        this.ticksRemaining = durationTicks;
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -94,7 +96,7 @@ public final class LifeStealState implements RuntimeState, Listener {
             return;
         }
 
-        double healAmount = event.getDamage() * HEAL_RATIO;
+        double healAmount = event.getDamage() * healRatio;
 
         if (healAmount <= 0.0) {
             return;

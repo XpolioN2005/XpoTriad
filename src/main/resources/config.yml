@@ -1,0 +1,179 @@
+# ============================================================================
+#  XpoTriad — balance configuration
+#  Reload in-game with: /xpt reload   (permission: xpotriad.admin)
+#
+#  Units:
+#    time   = TICKS (20 ticks = 1s)
+#    range  = BLOCKS
+#    damage = half-hearts (vanilla)
+#
+#  Missing or invalid values fall back to the compiled defaults shown here.
+#  Loot (drop tables / rarities) is intentionally NOT configurable.
+# ============================================================================
+
+ability:
+  # Global cooldown = base + sum(fragment cooldown-modifier-ticks), clamped [min,max]
+  base-cooldown-ticks: 20
+  min-cooldown-ticks: 0
+  max-cooldown-ticks: 300
+  # Engine hold added after each occupied stage (PRE_CAST -> CAST -> POST_CAST)
+  stage-buffer-ticks: 5
+
+# Shared targeting ranges used by every single-target / point fragment.
+targeting:
+  single-target:
+    raycast-range: 12.0      # sight ray used to pick a target
+    nearby-radius: 3.0       # fallback: nearest entity within this radius
+  point-range: 15.0          # block-raycast range for point-targeted abilities
+
+# ----------------------------------------------------------------------------
+#  FRAGMENTS — per-fragment timing. Sorted by rarity, then alphabetically.
+#  execution-time-ticks     = ticks the engine holds before the NEXT stage
+#  cooldown-modifier-ticks  = added to the base ability cooldown when it fires
+#  (rarity & type live in code; noted here for reference only)
+# ----------------------------------------------------------------------------
+fragments:
+
+  # ===== COMMON =====
+  delay:
+    execution-time-ticks: 20      # MELEE  (holds the engine = the delay itself)
+    cooldown-modifier-ticks: 0
+  heal:
+    execution-time-ticks: 10      # MELEE  (Regeneration)
+    cooldown-modifier-ticks: 0
+  knockback:
+    execution-time-ticks: 5       # MELEE
+    cooldown-modifier-ticks: 2
+  leap:
+    execution-time-ticks: 8       # MELEE
+    cooldown-modifier-ticks: 3
+  shield:
+    execution-time-ticks: 10      # MELEE
+    cooldown-modifier-ticks: 6
+  slow_falling:
+    execution-time-ticks: 10      # RANGED
+    cooldown-modifier-ticks: 3
+  smoke_bomb:
+    execution-time-ticks: 10      # MELEE
+    cooldown-modifier-ticks: 6
+  speed:
+    execution-time-ticks: 20      # MELEE
+    cooldown-modifier-ticks: 0
+  weakening:
+    execution-time-ticks: 10      # MELEE
+    cooldown-modifier-ticks: 3
+
+  # ===== UNCOMMON =====
+  cleanse:
+    execution-time-ticks: 8       # MELEE  (negative-effect list is code-level)
+    cooldown-modifier-ticks: 5
+  invisibility:
+    execution-time-ticks: 10      # MELEE
+    cooldown-modifier-ticks: 10
+  levitation:
+    execution-time-ticks: 10      # RANGED
+    cooldown-modifier-ticks: 6
+  thorns:
+    execution-time-ticks: 10      # MELEE
+    cooldown-modifier-ticks: 7
+
+  # ===== RARE =====
+  barrier:
+    execution-time-ticks: 12      # MELEE
+    cooldown-modifier-ticks: 12
+  blink:
+    execution-time-ticks: 5       # MELEE
+    cooldown-modifier-ticks: 10
+  execution:
+    execution-time-ticks: 5       # MELEE
+    cooldown-modifier-ticks: 8
+  explosion:
+    execution-time-ticks: 0       # MELEE
+    cooldown-modifier-ticks: 40
+  gravity_pull:
+    execution-time-ticks: 15      # MELEE
+    cooldown-modifier-ticks: 12
+  line_snipe:
+    execution-time-ticks: 8       # RANGED
+    cooldown-modifier-ticks: 10
+
+  # ===== EPIC =====
+  hound_call:
+    execution-time-ticks: 15      # MELEE
+    cooldown-modifier-ticks: 15
+  life_steal:
+    execution-time-ticks: 8       # MELEE
+    cooldown-modifier-ticks: 10
+  mark:
+    execution-time-ticks: 10      # MELEE
+    cooldown-modifier-ticks: 30
+  reflect:
+    execution-time-ticks: 10      # MELEE
+    cooldown-modifier-ticks: 14
+  soul_link:
+    execution-time-ticks: 12      # MELEE
+    cooldown-modifier-ticks: 15
+  swap:
+    execution-time-ticks: 8       # MELEE
+    cooldown-modifier-ticks: 14
+
+  # ===== LEGENDARY =====
+  cheat_death:
+    execution-time-ticks: 8       # MELEE
+    cooldown-modifier-ticks: 20
+  mass_freeze:
+    execution-time-ticks: 15      # RANGED
+    cooldown-modifier-ticks: 18
+  meteor:
+    execution-time-ticks: 20      # RANGED
+    cooldown-modifier-ticks: 25
+  repeat:
+    execution-time-ticks: 5       # MELEE  (chain depth-1; logic is code-level)
+    cooldown-modifier-ticks: 15
+  rewind:
+    execution-time-ticks: 15      # MELEE
+    cooldown-modifier-ticks: 20
+
+
+# ----------------------------------------------------------------------------
+#  EFFECTS — damage / range / duration per effect, sorted by rarity.
+#  delay / repeat / cleanse are omitted (no tunable effect values).
+#  swap's only distance is the shared single-target range, so it is empty.
+# ----------------------------------------------------------------------------
+effects:
+
+  # ===== COMMON =====
+  heal:            { potion-duration-ticks: 100, amplifier: 0 }   # Regeneration
+  speed:           { potion-duration-ticks: 100, amplifier: 1 }
+  knockback:       { horizontal-strength: 1.5, vertical-velocity: 0.35 }
+  leap:            { forward-velocity: 1.0, vertical-velocity: 0.8 }
+  shield:          { duration-ticks: 100, damage-multiplier: 0.6 }  # 0.6 = -40%
+  slow_falling:    { potion-duration-ticks: 100, amplifier: 0 }
+  smoke_bomb:      { duration-ticks: 100 }
+
+  # ===== UNCOMMON =====
+  invisibility:    { potion-duration-ticks: 100, amplifier: 0 }
+  levitation:      { potion-duration-ticks: 60, amplifier: 0 }
+  thorns:          { duration-ticks: 100, reflect-ratio: 0.3 }
+
+  # ===== RARE =====
+  barrier:         { radius: 3.0, duration-ticks: 100 }
+  blink:           { max-distance: 8.0 }
+  execution:       { health-threshold-ratio: 0.25, bonus-damage: 10.0 }
+  explosion:       { radius: 4.0, power: 4.0 }
+  gravity_pull:    { radius: 4.0, duration-ticks: 60, pull-interval-ticks: 5, pull-strength: 0.35 }
+  line_snipe:      { max-distance: 30.0, lifetime-ticks: 20, damage: 8.0 }
+
+  # ===== EPIC =====
+  hound_call:      { count: 5, summon-ring-radius: 1.5, lifetime-ticks: 200 }
+  life_steal:      { duration-ticks: 100, heal-ratio: 0.25 }
+  mark:            { duration-ticks: 200, damage-multiplier: 1.5 }
+  reflect:         { duration-ticks: 80 }
+  soul_link:       { duration-ticks: 100, transfer-ratio: 0.3 }
+  swap:            {}
+
+  # ===== LEGENDARY =====
+  cheat_death:     { duration-ticks: 40 }   # full immunity
+  mass_freeze:     { area-radius: 5.0, duration-ticks: 60 }
+  meteor:          { lifetime-ticks: 40, aoe-radius: 4.0, impact-damage: 20.0, launch-speed: 1.5 }
+  rewind:          { trigger-ticks: 100 }

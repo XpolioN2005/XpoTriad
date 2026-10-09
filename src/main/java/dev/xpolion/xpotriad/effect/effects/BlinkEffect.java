@@ -2,6 +2,7 @@ package dev.xpolion.xpotriad.effect.effects;
 
 import dev.xpolion.xpotriad.Main;
 import dev.xpolion.xpotriad.ability.AbilityContext;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 
 import org.bukkit.Color;
@@ -28,7 +29,6 @@ import org.bukkit.util.Vector;
  */
 public final class BlinkEffect implements Effect {
 
-    private static final double MAX_DISTANCE = 8.0;
     private static final double STEP = 0.25;
     private static final double RISE_DURATION_SECONDS = 5.0 / 20.0;
 
@@ -39,6 +39,8 @@ public final class BlinkEffect implements Effect {
     public void apply(AbilityContext context) {
         Player source = context.getSource();
 
+        double maxDistance = BalanceConfig.get().effectDouble("blink", "max-distance", 8.0);
+
         World world = source.getWorld();
         Location eye = source.getEyeLocation();
         Vector direction = eye.getDirection();
@@ -46,7 +48,7 @@ public final class BlinkEffect implements Effect {
         RayTraceResult hit = world.rayTraceBlocks(
                 eye,
                 direction,
-                MAX_DISTANCE,
+                maxDistance,
                 FluidCollisionMode.NEVER,
                 true
         );
@@ -54,12 +56,12 @@ public final class BlinkEffect implements Effect {
         // Candidate endpoint: just before the block hit, or the full distance.
         Vector endpoint = (hit != null && hit.getHitPosition() != null)
                 ? hit.getHitPosition().subtract(direction.clone().multiply(0.6))
-                : eye.toVector().add(direction.clone().multiply(MAX_DISTANCE));
+                : eye.toVector().add(direction.clone().multiply(maxDistance));
 
         // Walk back along the ray until feet and head are passable.
         Location destination = null;
 
-        for (double back = 0.0; back <= MAX_DISTANCE; back += STEP) {
+        for (double back = 0.0; back <= maxDistance; back += STEP) {
             Vector candidate = endpoint.clone().subtract(direction.clone().multiply(back));
 
             if (candidate.getY() < 1.0 || candidate.getY() >= world.getMaxHeight() - 1.0) {

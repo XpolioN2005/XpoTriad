@@ -22,19 +22,16 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class ShieldState implements RuntimeState, Listener {
 
-    private static final int DURATION_TICKS = 100;
-    private static final double RING_DURATION_SECONDS = DURATION_TICKS / 20.0;
-
-    /** Multiplier applied to incoming damage: 1.0 - 0.40 = 0.60 (40% reduction). */
-    private static final double DAMAGE_MULTIPLIER = 0.6;
+    private final double damageMultiplier;
 
     private final Player target;
     private final ParticleHandle ringHandle;
 
-    private int ticksRemaining = DURATION_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
-    public ShieldState(Player target, JavaPlugin plugin, ParticleSystem particleSystem) {
+    public ShieldState(Player target, JavaPlugin plugin, ParticleSystem particleSystem,
+                       int durationTicks, double damageMultiplier) {
         if (target == null) {
             throw new IllegalArgumentException("Target cannot be null");
         }
@@ -46,11 +43,15 @@ public final class ShieldState implements RuntimeState, Listener {
         }
 
         this.target = target;
+        this.damageMultiplier = damageMultiplier;
+        this.ticksRemaining = durationTicks;
+
+        double ringDurationSeconds = durationTicks / 20.0;
 
         this.ringHandle = particleSystem.playPersistent(
                 new ShieldRingAnimation(),
                 target,
-                RING_DURATION_SECONDS
+                ringDurationSeconds
         );
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
@@ -81,7 +82,7 @@ public final class ShieldState implements RuntimeState, Listener {
         }
 
         if (event.getEntity().equals(target)) {
-            event.setDamage(event.getDamage() * DAMAGE_MULTIPLIER);
+            event.setDamage(event.getDamage() * damageMultiplier);
         }
     }
 

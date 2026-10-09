@@ -27,9 +27,6 @@ import java.util.List;
  */
 public final class MassFreezeState implements RuntimeState {
 
-    private static final int DURATION_TICKS = 60;
-    private static final double RING_DURATION_SECONDS = DURATION_TICKS / 20.0;
-
     private static final Vector ZERO_VELOCITY = new Vector(0.0, 0.0, 0.0);
 
     private final Player source;
@@ -38,7 +35,7 @@ public final class MassFreezeState implements RuntimeState {
     private final ParticleSystem particleSystem;
     private final ParticleHandle ringHandle;
 
-    private int ticksRemaining = DURATION_TICKS;
+    private int ticksRemaining;
     private volatile boolean finished = false;
 
     public MassFreezeState(
@@ -46,7 +43,8 @@ public final class MassFreezeState implements RuntimeState {
             Location center,
             List<LivingEntity> frozen,
             JavaPlugin plugin,
-            ParticleSystem particleSystem
+            ParticleSystem particleSystem,
+            int durationTicks
     ) {
         if (source == null) {
             throw new IllegalArgumentException("Source cannot be null");
@@ -68,11 +66,12 @@ public final class MassFreezeState implements RuntimeState {
         this.center = center.clone();
         this.frozen = new ArrayList<>(frozen);
         this.particleSystem = particleSystem;
+        this.ticksRemaining = durationTicks;
 
         this.ringHandle = particleSystem.playPersistent(
                 new MassFreezeRingAnimation(),
                 this.center.clone(),
-                RING_DURATION_SECONDS
+                durationTicks / 20.0
         );
     }
 

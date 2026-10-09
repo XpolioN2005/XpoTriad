@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.effects.InvisibilityEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
@@ -25,10 +26,10 @@ public final class InvisibilityFragment extends Fragment {
                 "invisibility",
                 "Invisibility Fragment",
                 List.of(Component.text("Grants invisibility.", NamedTextColor.GRAY)),
-                10L,
+                BalanceConfig.get().executionTime("invisibility", 10L),
                 Rarity.UNCOMMON,
                 Type.MELEE,
-                10L,
+                BalanceConfig.get().cooldownModifier("invisibility", 10L),
                 new InvisibilityEffect()
         );
     }

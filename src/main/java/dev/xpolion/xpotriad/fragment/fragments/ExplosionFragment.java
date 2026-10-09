@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.effects.ExplosionEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
@@ -25,10 +26,10 @@ public final class ExplosionFragment extends Fragment {
                 "explosion",
                 "Explosion Fragment",
                 List.of(Component.text("Creates an explosion.", NamedTextColor.GRAY)),
-                0L,
+                BalanceConfig.get().executionTime("explosion", 0L),
                 Rarity.RARE,
                 Type.MELEE,
-                40L,
+                BalanceConfig.get().cooldownModifier("explosion", 40L),
                 new ExplosionEffect()
         );
     }

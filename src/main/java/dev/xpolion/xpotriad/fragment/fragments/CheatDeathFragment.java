@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.CheatDeathEffect;
@@ -27,10 +28,10 @@ public final class CheatDeathFragment extends Fragment {
                 "cheat_death",
                 "Cheat Death Fragment",
                 List.of(Component.text("Become immune to damage for a brief moment.", NamedTextColor.GRAY)),
-                8L,
+                BalanceConfig.get().executionTime("cheat_death", 8L),
                 Rarity.LEGENDARY,
                 Type.MELEE,
-                20L,
+                BalanceConfig.get().cooldownModifier("cheat_death", 20L),
                 new CheatDeathEffect()
         );
     }

@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.MassFreezeEffect;
@@ -28,10 +29,10 @@ public final class MassFreezeFragment extends Fragment {
                 "mass_freeze",
                 "Mass Freeze Fragment",
                 List.of(Component.text("Freezes enemies in an area.", NamedTextColor.GRAY)),
-                15L,
+                BalanceConfig.get().executionTime("mass_freeze", 15L),
                 Rarity.LEGENDARY,
                 Type.RANGED,
-                18L,
+                BalanceConfig.get().cooldownModifier("mass_freeze", 18L),
                 new MassFreezeEffect()
         );
     }

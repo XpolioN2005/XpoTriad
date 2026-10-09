@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.LeapEffect;
@@ -28,10 +29,10 @@ public final class LeapFragment extends Fragment {
                 "leap",
                 "Leap Fragment",
                 List.of(Component.text("Launches you forward and upward.", NamedTextColor.GRAY)),
-                8L,
+                BalanceConfig.get().executionTime("leap", 8L),
                 Rarity.COMMON,
                 Type.MELEE,
-                3L,
+                BalanceConfig.get().cooldownModifier("leap", 3L),
                 new LeapEffect()
         );
     }

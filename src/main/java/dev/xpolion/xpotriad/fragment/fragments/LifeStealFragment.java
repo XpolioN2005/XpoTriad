@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import java.util.List;
 
 import dev.xpolion.xpotriad.effect.effects.LifeStealEffect;
@@ -27,10 +28,10 @@ public final class LifeStealFragment extends Fragment {
                 "life_steal",
                 "Life Steal Fragment",
                 List.of(Component.text("Converts part of your damage into health.", NamedTextColor.GRAY)),
-                8L,
+                BalanceConfig.get().executionTime("life_steal", 8L),
                 Rarity.EPIC,
                 Type.MELEE,
-                10L,
+                BalanceConfig.get().cooldownModifier("life_steal", 10L),
                 new LifeStealEffect()
         );
     }

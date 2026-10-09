@@ -3,24 +3,14 @@ package dev.xpolion.xpotriad;
 import dev.xpolion.xpotriad.ability.AbilityEngine;
 import dev.xpolion.xpotriad.ability.AbilityItem;
 import dev.xpolion.xpotriad.ability.AbilityListener;
-import dev.xpolion.xpotriad.fragment.Fragment;
+import dev.xpolion.xpotriad.command.XptCommand;
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.fragment.FragmentItem;
 import dev.xpolion.xpotriad.fragment.FragmentLootListener;
-import dev.xpolion.xpotriad.fragment.FragmentRegistry;
 import dev.xpolion.xpotriad.particle.ParticleSystem;
 import dev.xpolion.xpotriad.runtime.RuntimeManager;
 import dev.xpolion.xpotriad.visual.EtchLoom;
-import org.bukkit.Material;
-import org.bukkit.inventory.meta.BlockStateMeta;
-import org.bukkit.block.Chest;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class Main extends JavaPlugin {
 
@@ -31,6 +21,9 @@ public final class Main extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
+        reloadBalanceConfig();
+
         AbilityItem.initialize(this);
         FragmentItem.initialize(this);
 
@@ -49,9 +42,13 @@ public final class Main extends JavaPlugin {
         );
 
         getServer().getPluginManager().registerEvents(
-        new FragmentLootListener(),
-        this
+                new FragmentLootListener(),
+                this
         );
+
+        XptCommand xptCommand = new XptCommand(this, etchLoom);
+        getCommand("xpt").setExecutor(xptCommand);
+        getCommand("xpt").setTabCompleter(xptCommand);
 
         getLogger().info("XpoTriad enabled!");
     }
@@ -67,65 +64,23 @@ public final class Main extends JavaPlugin {
         getLogger().info("XpoTriad disabled!");
     }
 
+    /**
+     * Re-reads config.yml and atomically installs a fresh BalanceConfig.
+     * Safe to call at any time; running abilities keep their snapshot values.
+     */
+    public void reloadBalanceConfig() {
+        reloadConfig();
+
+        BalanceConfig balanceConfig = new BalanceConfig();
+        balanceConfig.load(getConfig(), getLogger());
+        BalanceConfig.set(balanceConfig);
+    }
+
     public RuntimeManager getRuntimeManager() {
         return runtimeManager;
     }
 
     public ParticleSystem getParticleSystem() {
         return particleSystem;
-    }
-
-    @Override
-    public boolean onCommand(
-            CommandSender sender,
-            Command command,
-            String label,
-            String[] args
-    ) {
-        if (!(sender instanceof Player player)) {
-            return true;
-        }
-
-        if (command.getName().equalsIgnoreCase("xpbind")) {
-            etchLoom.open(player);
-            return true;
-        }
-
-        if (!command.getName().equalsIgnoreCase("xptest")) {
-            return false;
-        }
-
-        // Chest(s) full of every registered fragment — nothing else is given.
-        // A single chest holds 27 slots; additional chests cover any overflow.
-        List<ItemStack> fragmentItems = new ArrayList<>();
-
-        for (Fragment fragment : FragmentRegistry.all()) {
-            fragmentItems.add(FragmentItem.create(fragment));
-        }
-
-        int chestCount = (fragmentItems.size() + 26) / 27;
-
-        for (int chestIndex = 0; chestIndex < chestCount; chestIndex++) {
-            ItemStack chestItem = new ItemStack(Material.CHEST);
-            BlockStateMeta meta = (BlockStateMeta) chestItem.getItemMeta();
-
-            if (meta != null) {
-                Chest chest = (Chest) meta.getBlockState();
-
-                int from = chestIndex * 27;
-                int to = Math.min(from + 27, fragmentItems.size());
-
-                for (int i = from; i < to; i++) {
-                    chest.getInventory().addItem(fragmentItems.get(i));
-                }
-
-                meta.setBlockState(chest);
-                chestItem.setItemMeta(meta);
-            }
-
-            player.getInventory().addItem(chestItem);
-        }
-
-        return true;
     }
 }

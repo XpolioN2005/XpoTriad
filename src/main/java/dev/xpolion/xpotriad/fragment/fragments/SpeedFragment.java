@@ -1,5 +1,6 @@
 package dev.xpolion.xpotriad.fragment.fragments;
 
+import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.effects.SpeedEffect;
 import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.Fragment.Rarity;
@@ -25,10 +26,10 @@ public final class SpeedFragment extends Fragment {
                 "speed",
                 "Speed Fragment",
                 List.of(Component.text("Grants increased movement speed.", NamedTextColor.GRAY)),
-                20L,
+                BalanceConfig.get().executionTime("speed", 20L),
                 Rarity.COMMON,
                 Type.MELEE,
-                0L,
+                BalanceConfig.get().cooldownModifier("speed", 0L),
                 new SpeedEffect()
         );
     }
