@@ -12,15 +12,15 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
- * Launches a giant fireball toward the selected point: 20 damage,
- * 4-block AOE, 40-tick lifetime, no terrain destruction.
+ * Bombards a static zone around the caster: count meteors fall from the
+ * sky into zone-radius, each dealing AOE damage with no terrain damage.
  *
  * executionTime    = 20 ticks
  * rarity           = LEGENDARY
  * type             = RANGED
  * cooldownModifier = +25 ticks
- * target           = POINT
- * effect           = MeteorState runtime (tracks the projectile)
+ * target           = SELF (static zone fixed at the cast position)
+ * effect           = MeteorState runtime (schedules the barrage)
  */
 public final class MeteorFragment extends Fragment {
 

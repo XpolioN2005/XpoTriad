@@ -9,14 +9,20 @@ import org.bukkit.Particle;
 import org.bukkit.entity.LivingEntity;
 
 /**
- * Persistent tether drawn between the link source (entity-attached
- * origin) and the linked target. Follows both entities every frame;
- * finite lifetime supplied by ParticleSystem.playPersistent.
+ * Sparse tether drawn between the link source (entity-attached
+ * origin) and the linked target — only the middle band of the line is
+ * drawn, so the tether never touches either player, and the points are
+ * spaced far apart for a sparse look. Follows both entities every
+ * frame; finite lifetime supplied by ParticleSystem.playPersistent.
  */
 public final class SoulTetherAnimation implements ParticleAnimation {
 
-    private static final int POINTS = 14;
+    /** Few, widely spaced points — sparse by design. */
+    private static final int POINTS = 5;
     private static final double HEIGHT_OFFSET = 1.0;
+    /** Tether spans only the middle of the line (gaps near both players). */
+    private static final double BAND_START = 0.3;
+    private static final double BAND_END = 0.7;
 
     private static final Particle.DustOptions DUST_SOUL =
             new Particle.DustOptions(Color.fromRGB(120, 220, 255), 1.0f);
@@ -52,12 +58,15 @@ public final class SoulTetherAnimation implements ParticleAnimation {
             return;
         }
 
-        org.bukkit.util.Vector step = delta.multiply(1.0 / length / POINTS);
+        org.bukkit.util.Vector unit = delta.multiply(1.0 / length);
 
-        for (int i = 1; i <= POINTS; i++) {
+        for (int i = 0; i < POINTS; i++) {
+            // Middle band only — t runs BAND_START..BAND_END, never the ends.
+            double t = BAND_START + (BAND_END - BAND_START) * (i / (double) (POINTS - 1));
+
             origin.getWorld().spawnParticle(
                     Particle.DUST,
-                    start.clone().add(step.clone().multiply(i)),
+                    start.clone().add(unit.clone().multiply(length * t)),
                     1,
                     0, 0, 0,
                     0,

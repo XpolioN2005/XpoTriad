@@ -76,6 +76,7 @@ $sources = Get-ChildItem src/main/java -Recurse -Filter '*.java' | ForEach-Objec
 javac -cp $classpath -d build/classes $sources
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Copy-Item src/main/resources/plugin.yml build/classes/
+Copy-Item src/main/resources/config.yml build/classes/
 jar -cf build/XpoTriad.jar -C build/classes .
 ```
 

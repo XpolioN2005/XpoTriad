@@ -9,12 +9,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
- * Maintains a smoke area centered on the caster for exactly 100 ticks.
+ * Maintains a static smoke area at the caster's position for exactly 100 ticks.
  *
  * Visual cover only — the smoke deals no damage and listens to nothing.
- * Lifecycle: start -> dense smoke (r1.0 -> 2.5 over first 20 ticks, then
- * held) -> 100 ticks -> cleanup (stops the smoke particle handle).
- * Early stop: target becomes invalid.
+ * The cloud is pinned to the cast location (WORLD attachment) and never
+ * follows the caster. Lifecycle: start -> dense smoke (r1.0 -> 2.5 over
+ * first 20 ticks, then held) -> 100 ticks -> cleanup (stops the handle).
  */
 public final class SmokeBombState implements RuntimeState {
 
@@ -41,9 +41,10 @@ public final class SmokeBombState implements RuntimeState {
 
         double durationSeconds = durationTicks / 20.0;
 
+        // Static cloud pinned to the cast position — WORLD attachment.
         this.smokeHandle = particleSystem.playPersistent(
                 new SmokeCloudAnimation(),
-                target,
+                target.getLocation().clone(),
                 durationSeconds
         );
     }
@@ -51,11 +52,6 @@ public final class SmokeBombState implements RuntimeState {
     @Override
     public void tick() {
         if (finished) {
-            return;
-        }
-
-        if (!target.isValid() || target.isDead()) {
-            stop();
             return;
         }
 

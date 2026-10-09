@@ -44,6 +44,7 @@ public final class MassFreezeState implements RuntimeState {
             List<LivingEntity> frozen,
             JavaPlugin plugin,
             ParticleSystem particleSystem,
+            double radius,
             int durationTicks
     ) {
         if (source == null) {
@@ -69,7 +70,7 @@ public final class MassFreezeState implements RuntimeState {
         this.ticksRemaining = durationTicks;
 
         this.ringHandle = particleSystem.playPersistent(
-                new MassFreezeRingAnimation(),
+                new MassFreezeRingAnimation(radius),
                 this.center.clone(),
                 durationTicks / 20.0
         );

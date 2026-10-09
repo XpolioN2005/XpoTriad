@@ -73,9 +73,6 @@ fragments:
   levitation:
     execution-time-ticks: 10      # RANGED
     cooldown-modifier-ticks: 6
-  thorns:
-    execution-time-ticks: 10      # MELEE
-    cooldown-modifier-ticks: 7
 
   # ===== RARE =====
   barrier:
@@ -154,7 +151,6 @@ effects:
   # ===== UNCOMMON =====
   invisibility:    { potion-duration-ticks: 100, amplifier: 0 }
   levitation:      { potion-duration-ticks: 60, amplifier: 0 }
-  thorns:          { duration-ticks: 100, reflect-ratio: 0.3 }
 
   # ===== RARE =====
   barrier:         { radius: 3.0, duration-ticks: 100 }
@@ -175,5 +171,5 @@ effects:
   # ===== LEGENDARY =====
   cheat_death:     { duration-ticks: 40 }   # full immunity
   mass_freeze:     { area-radius: 5.0, duration-ticks: 60 }
-  meteor:          { lifetime-ticks: 40, aoe-radius: 4.0, impact-damage: 20.0, launch-speed: 1.5 }
+  meteor:          { zone-radius: 4.0, count: 5, stagger-ticks: 4, spawn-height: 24, fall-speed: 1.5, aoe-radius: 4.0, impact-damage: 20.0, lifetime-ticks: 60 }
   rewind:          { trigger-ticks: 100 }

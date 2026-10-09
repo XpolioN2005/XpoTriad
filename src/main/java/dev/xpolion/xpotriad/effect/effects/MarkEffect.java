@@ -23,18 +23,13 @@ public final class MarkEffect implements Effect {
 
         BalanceConfig cfg = BalanceConfig.get();
         double raycastRange = cfg.singleTargetRaycastRange();
-        double nearbyRadius = cfg.singleTargetNearbyRadius();
         double durationSeconds = cfg.effectLong("mark", "duration-ticks", 200L) / 20.0;
         double damageMultiplier = cfg.effectDouble("mark", "damage-multiplier", 1.5);
 
+        // Raycast only — no nearby fallback.
         List<LivingEntity> raycastTargets = TargetResolver.raycast(source, raycastRange);
         if (!raycastTargets.isEmpty()) {
             target = raycastTargets.get(0);
-        } else {
-            List<LivingEntity> nearby = TargetResolver.entitiesNear(source.getLocation(), nearbyRadius, source);
-            if (!nearby.isEmpty()) {
-                target = nearby.get(0);
-            }
         }
 
         if (target == null) {

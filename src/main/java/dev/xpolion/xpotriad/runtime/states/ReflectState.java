@@ -1,6 +1,8 @@
 package dev.xpolion.xpotriad.runtime.states;
 
+import dev.xpolion.xpotriad.particle.ParticleHandle;
 import dev.xpolion.xpotriad.particle.ParticleSystem;
+import dev.xpolion.xpotriad.particle.animations.ReflectSphereAnimation;
 import dev.xpolion.xpotriad.runtime.RuntimeState;
 
 import org.bukkit.Color;
@@ -29,8 +31,11 @@ import java.util.UUID;
  * behave like Cheat Death. Reflected projectiles are tracked by UUID and
  * never re-trigger the handler (no recursion).
  *
+ * Visual: a persistent see-through particle sphere envelops the target
+ * for the full duration; each reflect also fires a brief flash + trail.
+ *
  * Lifecycle: start -> cancel + redirect projectiles -> 80 ticks -> cleanup
- * (unregisters listener, drops UUID tracking).
+ * (unregisters listener, stops the sphere handle, drops UUID tracking).
  * Early stop: target becomes invalid.
  */
 public final class ReflectState implements RuntimeState, Listener {
@@ -40,6 +45,7 @@ public final class ReflectState implements RuntimeState, Listener {
 
     private final Player target;
     private final ParticleSystem particleSystem;
+    private final ParticleHandle sphereHandle;
     private final Set<UUID> reflectedProjectiles = new HashSet<>();
 
     private int ticksRemaining;
@@ -60,6 +66,13 @@ public final class ReflectState implements RuntimeState, Listener {
         this.target = target;
         this.particleSystem = particleSystem;
         this.ticksRemaining = durationTicks;
+
+        // Persistent see-through sphere covering the target.
+        this.sphereHandle = particleSystem.playPersistent(
+                new ReflectSphereAnimation(),
+                target,
+                durationTicks / 20.0
+        );
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -180,5 +193,9 @@ public final class ReflectState implements RuntimeState, Listener {
         finished = true;
         reflectedProjectiles.clear();
         HandlerList.unregisterAll(this);
+
+        if (sphereHandle != null && sphereHandle.isActive()) {
+            sphereHandle.stop();
+        }
     }
 }

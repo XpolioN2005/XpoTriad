@@ -8,19 +8,46 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 
 /**
- * Evenly spaced circular boundary at radius 3 around the barrier center.
- * Visible for the full barrier duration; finite lifetime supplied by
- * ParticleSystem.playPersistent.
+ * Circular boundary at the configured radius with particle walls rising
+ * from it — vertical lines whose dust shrinks row by row, so each wall
+ * fades upward. Visible for the full barrier duration; finite lifetime
+ * supplied by ParticleSystem.playPersistent.
  */
 public final class BarrierRingAnimation implements ParticleAnimation {
 
-    private static final double RADIUS = 3.0;
     private static final int POINTS = 28;
     private static final double ROTATION_SPEED = 0.8;
     private static final double HEIGHT_OFFSET = 0.1;
 
-    private static final Particle.DustOptions DUST_BARRIER =
+    /** Wall columns rise this high above the ring. */
+    private static final double WALL_HEIGHT = 3.0;
+    /** Rows per column; dust size shrinks row by row = fade upward. */
+    private static final int WALL_ROWS = 5;
+
+    private static final Particle.DustOptions DUST_RING =
             new Particle.DustOptions(Color.fromRGB(255, 200, 80), 1.2f);
+
+    /** Per-row wall dust: big at the base, small at the top. */
+    private static final Particle.DustOptions[] DUST_WALL =
+            new Particle.DustOptions[WALL_ROWS];
+
+    static {
+        for (int row = 0; row < WALL_ROWS; row++) {
+            float fraction = 1.0f - row / (float) WALL_ROWS;
+            DUST_WALL[row] = new Particle.DustOptions(
+                    Color.fromRGB(255, 200, 80), 0.3f + 0.9f * fraction);
+        }
+    }
+
+    private final double radius;
+
+    public BarrierRingAnimation(double radius) {
+        if (radius <= 0.0) {
+            throw new IllegalArgumentException("Radius must be positive");
+        }
+
+        this.radius = radius;
+    }
 
     @Override
     public void render(ParticleContext context) {
@@ -35,21 +62,32 @@ public final class BarrierRingAnimation implements ParticleAnimation {
 
         for (int i = 0; i < POINTS; i++) {
             double angle = i * angleStep + rotation;
+            double x = Math.cos(angle) * radius;
+            double z = Math.sin(angle) * radius;
 
-            Location particleLoc = origin.clone().add(
-                    Math.cos(angle) * RADIUS,
-                    HEIGHT_OFFSET,
-                    Math.sin(angle) * RADIUS
-            );
-
+            // Ground ring.
             origin.getWorld().spawnParticle(
                     Particle.DUST,
-                    particleLoc,
+                    origin.clone().add(x, HEIGHT_OFFSET, z),
                     1,
                     0, 0, 0,
                     0,
-                    DUST_BARRIER
+                    DUST_RING
             );
+
+            // Wall column rising from the ring, fading upward.
+            for (int row = 0; row < WALL_ROWS; row++) {
+                double height = HEIGHT_OFFSET + WALL_HEIGHT * (row + 1) / WALL_ROWS;
+
+                origin.getWorld().spawnParticle(
+                        Particle.DUST,
+                        origin.clone().add(x, height, z),
+                        1,
+                        0, 0, 0,
+                        0,
+                        DUST_WALL[row]
+                );
+            }
         }
     }
 }

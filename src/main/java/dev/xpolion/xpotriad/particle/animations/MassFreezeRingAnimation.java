@@ -8,19 +8,28 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 
 /**
- * Frost ring around the frozen area (radius 5) on the ground.
+ * Frost ring around the frozen area (configurable radius) on the ground.
  * Finite lifetime supplied by ParticleSystem.playPersistent; removed
  * with the freeze runtime.
  */
 public final class MassFreezeRingAnimation implements ParticleAnimation {
 
-    private static final double RADIUS = 5.0;
     private static final int POINTS = 36;
     private static final double ROTATION_SPEED = 0.6;
     private static final double HEIGHT_OFFSET = 0.1;
 
     private static final Particle.DustOptions DUST_FROST =
             new Particle.DustOptions(Color.fromRGB(170, 230, 255), 1.1f);
+
+    private final double radius;
+
+    public MassFreezeRingAnimation(double radius) {
+        if (radius <= 0.0) {
+            throw new IllegalArgumentException("Radius must be positive");
+        }
+
+        this.radius = radius;
+    }
 
     @Override
     public void render(ParticleContext context) {
@@ -37,9 +46,9 @@ public final class MassFreezeRingAnimation implements ParticleAnimation {
             double angle = i * angleStep + rotation;
 
             Location particleLoc = origin.clone().add(
-                    Math.cos(angle) * RADIUS,
+                    Math.cos(angle) * radius,
                     HEIGHT_OFFSET,
-                    Math.sin(angle) * RADIUS
+                    Math.sin(angle) * radius
             );
 
             origin.getWorld().spawnParticle(

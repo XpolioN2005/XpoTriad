@@ -12,27 +12,40 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
- * Circular boundary around a fixed point that prevents the entities
- * captured inside it from crossing outward.
+ * Circular boundary around a fixed point that nobody may cross in
+ * either direction — only the caster can leave (and re-enter) freely.
  *
- * Radius = 3, duration = 100 ticks. Caster is excluded at capture
- * (multiplayer safe). Lifecycle: start -> clamp crossings each tick ->
- * 100 ticks -> cleanup (stops the boundary ring particle handle).
- * Early stop: captured entities that become invalid are dropped from
- * tracking.
+ * Radius and duration come from config. Every other living entity is
+ * baselined on the side of the line where it was first seen; if it
+ * later crosses the line it is pushed straight back (inside -> outside
+ * attempts are clamped in, outside -> inside attempts are pushed out).
+ *
+ * Lifecycle: start -> clamp crossings each tick -> duration -> cleanup
+ * (stops the boundary ring/wall particle handle).
+ * Early stop: invalid entities are dropped from tracking.
  */
 public final class BarrierState implements RuntimeState {
+
+    /** Zeroed momentum after every boundary clamp. */
+    private static final Vector ZERO_VELOCITY = new Vector(0.0, 0.0, 0.0);
+
+    /** Entities are still queried this far outside the boundary. */
+    private static final double QUERY_MARGIN = 1.5;
+    /** Offset putting an entity decisively on one side of the line. */
+    private static final double EDGE_EPSILON = 0.05;
 
     private final double radius;
 
     private final Player source;
     private final Location center;
-    private final List<LivingEntity> inside = new ArrayList<>();
+    /** Tracked entities keyed by UUID — value holds their baseline side. */
+    private final Map<UUID, Tracked> tracked = new HashMap<>();
     private final ParticleHandle ringHandle;
 
     private int ticksRemaining;
@@ -58,13 +71,10 @@ public final class BarrierState implements RuntimeState {
         this.radius = radius;
         this.ticksRemaining = durationTicks;
 
-        // Capture the entities currently inside the boundary (caster excluded).
-        this.inside.addAll(TargetResolver.entitiesNear(this.center, radius, source));
-
         double ringDurationSeconds = durationTicks / 20.0;
 
         this.ringHandle = particleSystem.playPersistent(
-                new BarrierRingAnimation(),
+                new BarrierRingAnimation(radius),
                 this.center.clone(),
                 ringDurationSeconds
         );
@@ -83,32 +93,79 @@ public final class BarrierState implements RuntimeState {
             return;
         }
 
-        Iterator<LivingEntity> iterator = inside.iterator();
+        List<LivingEntity> nearby =
+                TargetResolver.entitiesNear(center, radius + QUERY_MARGIN);
 
-        while (iterator.hasNext()) {
-            LivingEntity entity = iterator.next();
+        for (LivingEntity entity : nearby) {
+            if (entity.equals(source)) {
+                continue; // Caster may leave (and re-enter) freely.
+            }
 
-            if (entity.isDead() || !entity.isValid()) {
-                iterator.remove(); // Invalid entities stop being tracked.
+            boolean insideNow = isInside(entity);
+            Tracked entry = tracked.get(entity.getUniqueId());
+
+            if (entry == null) {
+                // First sighting — baseline the side this entity started on.
+                tracked.put(entity.getUniqueId(), new Tracked(entity, insideNow));
                 continue;
             }
 
-            double dx = entity.getLocation().getX() - center.getX();
-            double dz = entity.getLocation().getZ() - center.getZ();
-            double distanceSquared = dx * dx + dz * dz;
-
-            if (distanceSquared > radius * radius) {
-                // Clamp back onto the boundary circle (keep entity height).
-                double distance = Math.sqrt(distanceSquared);
-                double scale = radius / distance;
-
-                Location clamped = entity.getLocation().clone();
-                clamped.setX(center.getX() + dx * scale);
-                clamped.setZ(center.getZ() + dz * scale);
-
-                entity.teleport(clamped);
-                entity.setVelocity(new Vector(0.0, 0.0, 0.0));
+            if (entry.wasInside != insideNow) {
+                // Crossed the line — push it back onto its baseline side.
+                clamp(entity, entry.wasInside);
             }
+        }
+
+        // Invalid entities stop being tracked.
+        tracked.entrySet().removeIf(entry ->
+                entry.getValue().entity.isDead()
+                        || !entry.getValue().entity.isValid());
+    }
+
+    private boolean isInside(LivingEntity entity) {
+        double dx = entity.getLocation().getX() - center.getX();
+        double dz = entity.getLocation().getZ() - center.getZ();
+        return dx * dx + dz * dz <= radius * radius;
+    }
+
+    /**
+     * Teleports the entity back onto its baseline side of the boundary
+     * (keeps height, zeroes momentum).
+     */
+    private void clamp(LivingEntity entity, boolean toInside) {
+        double dx = entity.getLocation().getX() - center.getX();
+        double dz = entity.getLocation().getZ() - center.getZ();
+        double distance = Math.sqrt(dx * dx + dz * dz);
+
+        if (distance < 1.0E-6) {
+            // Exactly on the center — push out along +X.
+            dx = 1.0;
+            dz = 0.0;
+            distance = 1.0;
+        }
+
+        double targetDistance = toInside
+                ? radius - EDGE_EPSILON
+                : radius + EDGE_EPSILON;
+        double scale = targetDistance / distance;
+
+        Location clamped = entity.getLocation().clone();
+        clamped.setX(center.getX() + dx * scale);
+        clamped.setZ(center.getZ() + dz * scale);
+
+        entity.teleport(clamped);
+        entity.setVelocity(ZERO_VELOCITY);
+    }
+
+    /** Tracked entity + the side of the boundary it baselined on. */
+    private static final class Tracked {
+
+        private final LivingEntity entity;
+        private final boolean wasInside;
+
+        private Tracked(LivingEntity entity, boolean wasInside) {
+            this.entity = entity;
+            this.wasInside = wasInside;
         }
     }
 

@@ -12,15 +12,16 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
- * Freezes every entity in a 5-block area for 60 ticks (velocity zeroed
- * each tick — works on players too).
+ * Freezes every entity in a radius around the caster's position at cast
+ * time for the configured duration (velocity zeroed each tick — works on
+ * players too). Center and frost ring are static, never follow the caster.
  *
  * executionTime    = 15 ticks
  * rarity           = LEGENDARY
  * type             = RANGED
  * cooldownModifier = +18 ticks
- * target           = AREA
- * effect           = MassFreezeState runtime (60 ticks, ends early for invalid entities)
+ * target           = SELF (static center fixed at the cast position)
+ * effect           = MassFreezeState runtime (ends early for invalid entities)
  */
 public final class MassFreezeFragment extends Fragment {
 

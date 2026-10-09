@@ -134,7 +134,8 @@ public final class SoulLinkState implements RuntimeState, Listener {
             transferring = false;
         }
 
-        // Particles travel along the tether from victim to receiver.
+        // Sparse burst across the middle of the tether only — matches the
+        // persistent visual, both ends stay open.
         Location from = victim.getLocation().add(0, 1.0, 0);
         Vector travel = receiver.getLocation().add(0, 1.0, 0).toVector()
                 .subtract(from.toVector());
@@ -146,10 +147,16 @@ public final class SoulLinkState implements RuntimeState, Listener {
                 return;
             }
 
-            for (double d = 0.0; d <= travel.length(); d += 0.35) {
+            double fullLength = travel.length();
+            Vector unit = travel.clone().multiply(1.0 / fullLength);
+
+            double bandStart = fullLength * 0.3;
+            double bandEnd = fullLength * 0.7;
+
+            for (double d = bandStart; d <= bandEnd + 1.0E-6; d += 1.0) {
                 origin.getWorld().spawnParticle(
                         Particle.DUST,
-                        origin.clone().add(travel.clone().multiply(d / travel.length())),
+                        origin.clone().add(unit.clone().multiply(d)),
                         1,
                         0, 0, 0,
                         0,

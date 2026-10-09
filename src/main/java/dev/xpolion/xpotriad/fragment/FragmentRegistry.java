@@ -35,7 +35,6 @@ import dev.xpolion.xpotriad.fragment.fragments.SmokeBombFragment;
 import dev.xpolion.xpotriad.fragment.fragments.SoulLinkFragment;
 import dev.xpolion.xpotriad.fragment.fragments.SpeedFragment;
 import dev.xpolion.xpotriad.fragment.fragments.SwapFragment;
-import dev.xpolion.xpotriad.fragment.fragments.ThornsFragment;
 import dev.xpolion.xpotriad.fragment.fragments.WeakeningFragment;
 
 /**
@@ -123,7 +122,6 @@ public final class FragmentRegistry {
         // --- UNCOMMON ---
         register(new CleanseFragment());
         register(new LevitationFragment());
-        register(new ThornsFragment());
 
         // --- RARE ---
         register(new GravityPullFragment());

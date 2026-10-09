@@ -20,10 +20,11 @@ import org.bukkit.util.Vector;
  * Targeting: POINT — block raycast up to 15 blocks (flows.md convention),
  * else the point 15 blocks along the view ray.
  *
- * Radius = 3 blocks, duration = 100 ticks. Entities inside at activation
- * (caster excluded — multiplayer safe) cannot cross the boundary while it
- * lasts. Runtime required; stops automatically after 100 ticks.
- * Visual: evenly spaced circular boundary, removed with the runtime.
+ * Radius and duration come from config. While it lasts NO living entity
+ * may cross the boundary in either direction — the caster moves freely
+ * (can leave and re-enter). Runtime required; stops automatically after
+ * the duration. Visual: ground ring with particle walls fading upward,
+ * removed with the runtime.
  */
 public final class BarrierEffect implements Effect {
 

@@ -4,7 +4,7 @@
 		{
 			"label": "Build XpoTriad",
 			"type": "shell",
-			"command": "if (Test-Path build) { Remove-Item build -Recurse -Force }; New-Item -ItemType Directory -Force build/classes | Out-Null; $classpath = (Get-ChildItem lib -Filter '*.jar' | ForEach-Object { $_.FullName }) -join ';'; if (-not $classpath) { throw 'No JARs found in lib/' }; $sources = Get-ChildItem src/main/java -Recurse -Filter '*.java' | ForEach-Object { $_.FullName }; javac -cp $classpath -d build/classes $sources; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Copy-Item src/main/resources/plugin.yml build/classes/; jar -cf build/XpoTriad.jar -C build/classes .",
+			"command": "if (Test-Path build) { Remove-Item build -Recurse -Force }; New-Item -ItemType Directory -Force build/classes | Out-Null; $classpath = (Get-ChildItem lib -Filter '*.jar' | ForEach-Object { $_.FullName }) -join ';'; if (-not $classpath) { throw 'No JARs found in lib/' }; $sources = Get-ChildItem src/main/java -Recurse -Filter '*.java' | ForEach-Object { $_.FullName }; javac -cp $classpath -d build/classes $sources; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Copy-Item src/main/resources/plugin.yml build/classes/; Copy-Item src/main/resources/config.yml build/classes/; jar -cf build/XpoTriad.jar -C build/classes .",
 			"options": {
 				"cwd": "${workspaceFolder}",
 				"shell": {
