@@ -30,15 +30,29 @@ import java.util.UUID;
  *   xpotriad:cast_fragment
  *   xpotriad:post_cast_fragment
  *   xpotriad:cooldown_until   - timestamp (epoch ms) until which this item is on cooldown
+ *   xpotriad:executing        - true while the ability sequence is in flight
+ *   xpotriad:executing_cast_at - epoch ms when the executing flag was written
  */
 public final class AbilityItem {
 
     private static final String ABILITY_MARKER = "ability";
 
+    /**
+     * Failsafe window for the executing flag. A real sequence lasts a few
+     * seconds at most (stage execution times + buffers), so a flag older
+     * than 500 ticks means the completion hook never ran (crash or thrown
+     * effect) and the flag must be discarded.
+     */
+    private static final long EXECUTING_FAILSAFE_TICKS = 500L;
+
+    private static JavaPlugin plugin;
+
     private static NamespacedKey abilityKey;
     private static NamespacedKey itemTypeKey;
     private static NamespacedKey abilityIdKey;
     private static NamespacedKey cooldownUntilKey;
+    private static NamespacedKey executingKey;
+    private static NamespacedKey executingCastAtKey;
 
     private static final NamespacedKey[] fragmentKeys =
             new NamespacedKey[Ability.Stage.values().length];
@@ -47,10 +61,14 @@ public final class AbilityItem {
     }
 
     public static void initialize(JavaPlugin plugin) {
-        abilityKey       = new NamespacedKey(plugin, "ability");
-        itemTypeKey      = new NamespacedKey(plugin, "item_type");
-        abilityIdKey     = new NamespacedKey(plugin, "ability_id");
-        cooldownUntilKey = new NamespacedKey(plugin, "cooldown_until");
+        AbilityItem.plugin = plugin;
+
+        abilityKey         = new NamespacedKey(plugin, "ability");
+        itemTypeKey        = new NamespacedKey(plugin, "item_type");
+        abilityIdKey       = new NamespacedKey(plugin, "ability_id");
+        cooldownUntilKey   = new NamespacedKey(plugin, "cooldown_until");
+        executingKey       = new NamespacedKey(plugin, "executing");
+        executingCastAtKey = new NamespacedKey(plugin, "executing_cast_at");
 
         fragmentKeys[Ability.Stage.PRE_CAST.ordinal()] =
                 new NamespacedKey(plugin, "pre_cast_fragment");
@@ -124,8 +142,11 @@ public final class AbilityItem {
             }
         }
 
-        // A newly engraved ability starts without an active cooldown.
+        // A newly engraved ability starts without an active cooldown
+        // and is never mid-execution.
         pdc.remove(cooldownUntilKey);
+        pdc.remove(executingKey);
+        pdc.remove(executingCastAtKey);
 
         // -----------------------------------------------------------------
         // Ability lore
@@ -318,6 +339,106 @@ public final class AbilityItem {
     }
 
     // -------------------------------------------------------------------------
+    // Executing flag (blocks clicks until the deferred cooldown is written)
+    // -------------------------------------------------------------------------
+
+    /** Result of an executing-flag lookup. */
+    public enum ExecutingState {
+        /** No flag present. */
+        NOT_EXECUTING,
+        /** Flag present and within the failsafe window. */
+        EXECUTING,
+        /** Flag present but expired - dead sequence, caller may proceed. */
+        STALE
+    }
+
+    /**
+     * Flags the item as mid-sequence. Written before the engine starts so a
+     * click arriving before the completion hook cannot fire the ability again.
+     */
+    public static void markExecuting(ItemStack item) {
+        if (item == null || item.getType() == Material.AIR) {
+            return;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+
+        if (meta == null) {
+            return;
+        }
+
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+
+        pdc.set(executingKey, PersistentDataType.BOOLEAN, Boolean.TRUE);
+        pdc.set(executingCastAtKey, PersistentDataType.LONG, System.currentTimeMillis());
+
+        item.setItemMeta(meta);
+    }
+
+    /**
+     * Fresh flag -&gt; EXECUTING (block the click). Expired or timestamp-less
+     * flag -&gt; STALE: both keys are removed here and a warning is logged, so
+     * the caller falls through and a dead sequence never bricks the item.
+     */
+    public static ExecutingState executingState(ItemStack item) {
+        if (!isAbilityItem(item)) {
+            return ExecutingState.NOT_EXECUTING;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+
+        if (meta == null) {
+            return ExecutingState.NOT_EXECUTING;
+        }
+
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+
+        Boolean flag = pdc.get(executingKey, PersistentDataType.BOOLEAN);
+
+        if (flag == null || !flag) {
+            return ExecutingState.NOT_EXECUTING;
+        }
+
+        Long castAt = pdc.get(executingCastAtKey, PersistentDataType.LONG);
+
+        if (castAt != null
+                && System.currentTimeMillis() - castAt <= EXECUTING_FAILSAFE_TICKS * 50L) {
+            return ExecutingState.EXECUTING;
+        }
+
+        clearExecuting(item);
+
+        if (plugin != null) {
+            plugin.getLogger().warning(
+                    "[XpoTriad] Cleared stale executing flag - the previous "
+                            + "ability sequence never completed."
+            );
+        }
+
+        return ExecutingState.STALE;
+    }
+
+    /** Releases the executing flag (completion hook, engrave, deconstruct). */
+    public static void clearExecuting(ItemStack item) {
+        if (item == null || item.getType() == Material.AIR) {
+            return;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+
+        if (meta == null) {
+            return;
+        }
+
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+
+        pdc.remove(executingKey);
+        pdc.remove(executingCastAtKey);
+
+        item.setItemMeta(meta);
+    }
+
+    // -------------------------------------------------------------------------
     // Lore
     // -------------------------------------------------------------------------
 
@@ -423,6 +544,8 @@ public final class AbilityItem {
         pdc.remove(itemTypeKey);
         pdc.remove(abilityIdKey);
         pdc.remove(cooldownUntilKey);
+        pdc.remove(executingKey);
+        pdc.remove(executingCastAtKey);
 
         for (NamespacedKey fragmentKey : fragmentKeys) {
             pdc.remove(fragmentKey);

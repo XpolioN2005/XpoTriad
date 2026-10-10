@@ -34,13 +34,17 @@ import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
  * gets a chance to activate. The vanilla interaction is only cancelled when
  * an ability actually executes.
  *
+ * <p>An activation stays EXECUTING until the completion hook writes the
+ * deferred cooldown, so a second click during the sequence never fires
+ * again. An executing flag older than 500 ticks is a dead sequence: it is
+ * discarded and the click proceeds normally.
+ *
  * <p>Action bar feedback:
  * <pre>
  *   &lt; 2.0s | Fired &gt;
  *   &lt; Fired | 1.5s &gt;
+ *   &lt; Fired | Executing &gt;
  *   &lt; Fired | Ready &gt;
- *   &lt; Fired
- *   Ready &gt;
  * </pre>
  */
 public final class AbilityListener implements Listener {
@@ -139,7 +143,7 @@ public final class AbilityListener implements Listener {
      * re-resolved by its ability id at completion, so moving/ swapping the item
      * mid-sequence still lands the cooldown on the correct slot.
      *
-     * @return the resulting state: EMPTY, READY, COOLDOWN or FIRED
+     * @return the resulting state: EMPTY, READY, EXECUTING, COOLDOWN or FIRED
      */
     private ActivationResult tryActivate(Player player, ItemStack item) {
         ActivationResult state = getState(item);
@@ -157,14 +161,30 @@ public final class AbilityListener implements Listener {
         long cooldownTicks = ability.calculateCooldown();
         String abilityId = AbilityItem.readAbilityId(item);
 
+        // Flag the item BEFORE the sequence starts: any click arriving while
+        // the sequence is running sees EXECUTING and cannot fire again.
+        AbilityItem.markExecuting(item);
+
         Runnable applyDeferredCooldown = () -> {
-            if (!player.isOnline()) {
-                return; // Offline at completion — nothing to write.
-            }
-            ItemStack current = AbilityItem.findByAbilityId(player, abilityId);
-            if (current != null) {
-                AbilityItem.applyCooldown(current, cooldownTicks);
-                player.updateInventory();
+            try {
+                if (!player.isOnline()) {
+                    return; // Offline at completion — nothing to write.
+                }
+                ItemStack current = AbilityItem.findByAbilityId(player, abilityId);
+                if (current != null) {
+                    AbilityItem.applyCooldown(current, cooldownTicks);
+                    player.updateInventory();
+                }
+            } finally {
+                // Always release the executing flag. Re-resolve the stack the
+                // same way the cooldown does; if it is gone, the 500-tick
+                // failsafe clears the flag later.
+                ItemStack flagged = player.isOnline()
+                        ? AbilityItem.findByAbilityId(player, abilityId)
+                        : item;
+                if (flagged != null) {
+                    AbilityItem.clearExecuting(flagged);
+                }
             }
         };
 
@@ -175,6 +195,11 @@ public final class AbilityListener implements Listener {
 
     /**
      * Reads the current state of an ability item without activating it.
+     *
+     * <p>Priority: executing flag, then cooldown, then READY. A stale
+     * executing flag (its sequence died before the completion hook ran) was
+     * already discarded by {@link AbilityItem#executingState}, so this falls
+     * through and the click starts a fresh sequence.</p>
      */
     private ActivationResult getState(ItemStack item) {
         if (!AbilityItem.isAbilityItem(item)) {
@@ -183,6 +208,10 @@ public final class AbilityListener implements Listener {
 
         if (AbilityItem.read(item) == null) {
             return ActivationResult.empty();
+        }
+
+        if (AbilityItem.executingState(item) == AbilityItem.ExecutingState.EXECUTING) {
+            return ActivationResult.executing();
         }
 
         if (AbilityItem.isOnCooldown(item)) {
@@ -253,6 +282,10 @@ public final class AbilityListener implements Listener {
             return new ActivationResult(State.FIRED, 0);
         }
 
+        static ActivationResult executing() {
+            return new ActivationResult(State.EXECUTING, 0);
+        }
+
         static ActivationResult cooldown(long remainingTicks) {
             return new ActivationResult(State.COOLDOWN, remainingTicks);
         }
@@ -280,6 +313,9 @@ public final class AbilityListener implements Listener {
                                 NamedTextColor.RED
                         );
 
+                case EXECUTING ->
+                        Component.text("Executing", NamedTextColor.YELLOW);
+
                 case READY ->
                         Component.text("Ready", NamedTextColor.YELLOW);
 
@@ -292,6 +328,7 @@ public final class AbilityListener implements Listener {
     private enum State {
         EMPTY,
         READY,
+        EXECUTING,
         COOLDOWN,
         FIRED
     }
