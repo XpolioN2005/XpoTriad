@@ -68,6 +68,10 @@ public final class EtchLoom {
                 Component.text("EtchLoom")
         );
 
+        // Orange accent rows across the top (row 1) and bottom (row 6).
+        decorateRow(session, 1, Material.ORANGE_STAINED_GLASS_PANE);
+        decorateRow(session, 6, Material.ORANGE_STAINED_GLASS_PANE);
+
         // Info / description row (row 3)
         session.info(2, 3, createInfoPane(
                 Material.CYAN_STAINED_GLASS_PANE,
@@ -80,7 +84,7 @@ public final class EtchLoom {
         ));
 
         session.info(4, 3, createInfoPane(
-                Material.PURPLE_STAINED_GLASS_PANE,
+                Material.BLUE_STAINED_GLASS_PANE,
                 Component.text("Pre-Cast Fragment", NamedTextColor.LIGHT_PURPLE),
                 List.of(
                         Component.text("The Fragment placed below will execute", NamedTextColor.GRAY),
@@ -126,9 +130,9 @@ public final class EtchLoom {
         // Engrave button
         session.button(
                 8,
-                4,
+                3,
                 createNamedItem(
-                        Material.LIME_STAINED_GLASS_PANE,
+                        Material.LIME_TERRACOTTA,
                         Component.text("Engrave", NamedTextColor.GREEN)
                 ),
                 this::onEngrave
@@ -136,8 +140,8 @@ public final class EtchLoom {
 
         // Tutorial button - opens the book in place (no item is given)
         session.button(
-                9,
-                6,
+                8,
+                4,
                 createNamedItem(
                         Material.WRITTEN_BOOK,
                         Component.text("Tutorial", NamedTextColor.GOLD)
@@ -346,6 +350,23 @@ public final class EtchLoom {
         session.returnItem(engravedTarget);
 
         return true;
+    }
+
+    /**
+     * Fills every column of a single row with a decorative pane.
+     *
+     * @param row 1-based row index (1..6)
+     */
+    private static void decorateRow(
+            ChestGui.Session session,
+            int row,
+            Material material
+    ) {
+        ItemStack pane = new ItemStack(material);
+
+        for (int x = 1; x <= ChestGui.COLUMNS; x++) {
+            session.decoration(x, row, pane);
+        }
     }
 
     private static ItemStack createInfoPane(

@@ -10,6 +10,9 @@ import dev.xpolion.xpotriad.fragment.FragmentLootListener;
 import dev.xpolion.xpotriad.particle.ParticleSystem;
 import dev.xpolion.xpotriad.runtime.RuntimeManager;
 import dev.xpolion.xpotriad.visual.EtchLoom;
+import dev.xpolion.xpotriad.visual.EtchLoomItem;
+import dev.xpolion.xpotriad.visual.EtchLoomItemListener;
+import dev.xpolion.xpotriad.visual.EtchLoomItemRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Main extends JavaPlugin {
@@ -30,6 +33,10 @@ public final class Main extends JavaPlugin {
         abilityEngine = new AbilityEngine(this);
         etchLoom = new EtchLoom(this);
 
+        // EtchLoom item: PDC key must exist before the recipe builds one.
+        EtchLoomItem.initialize(this);
+        EtchLoomItemRecipe.register(this);
+
         runtimeManager = new RuntimeManager(this);
         runtimeManager.start();
 
@@ -43,6 +50,11 @@ public final class Main extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(
                 new FragmentLootListener(),
+                this
+        );
+
+        getServer().getPluginManager().registerEvents(
+                new EtchLoomItemListener(etchLoom),
                 this
         );
 
