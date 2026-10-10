@@ -5,8 +5,8 @@ api-version: "26.3"
 
 commands:
   xpt:
-    description: XpoTriad dispatcher (reload / test / bind / help)
-    usage: /xpt <reload|test|bind|help>
+    description: XpoTriad dispatcher (reload / test / bind / book / help)
+    usage: /xpt <reload|test|bind|book|help>
 
 permissions:
   xpotriad.admin:

@@ -5,6 +5,7 @@ import dev.xpolion.xpotriad.fragment.Fragment;
 import dev.xpolion.xpotriad.fragment.FragmentItem;
 import dev.xpolion.xpotriad.fragment.FragmentRegistry;
 import dev.xpolion.xpotriad.visual.EtchLoom;
+import dev.xpolion.xpotriad.visual.TutorialBook;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -28,6 +29,7 @@ import java.util.Locale;
  *   /xpt reload   — re-read config.yml (permission: xpotriad.admin)
  *   /xpt test     — chest(s) with every registered fragment
  *   /xpt bind     — open the EtchLoom GUI
+ *   /xpt book     — open the tutorial book (no item is given)
  *   /xpt help     — usage overview
  * </pre>
  */
@@ -35,7 +37,7 @@ public final class XptCommand implements TabExecutor {
 
     private static final String PERMISSION_RELOAD = "xpotriad.admin";
 
-    private static final List<String> SUBCOMMANDS = List.of("reload", "test", "bind", "help");
+    private static final List<String> SUBCOMMANDS = List.of("reload", "test", "bind", "book", "help");
 
     private final Main plugin;
     private final EtchLoom etchLoom;
@@ -56,6 +58,7 @@ public final class XptCommand implements TabExecutor {
             case "reload" -> handleReload(sender);
             case "test" -> handleTest(sender);
             case "bind" -> handleBind(sender);
+            case "book" -> handleBook(sender);
             case "help" -> sendHelp(sender);
             default -> sendHelp(sender);
         }
@@ -132,6 +135,18 @@ public final class XptCommand implements TabExecutor {
         etchLoom.open(player);
     }
 
+    /**
+     * Opens the tutorial book in place - the player receives no item.
+     */
+    private void handleBook(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            message(sender, Component.text("Players only.", NamedTextColor.RED));
+            return;
+        }
+
+        TutorialBook.open(player);
+    }
+
     private void sendHelp(CommandSender sender) {
         message(sender, Component.text("=== XpoTriad ===", NamedTextColor.GOLD));
         message(sender, Component.text("/xpt reload", NamedTextColor.YELLOW)
@@ -140,6 +155,8 @@ public final class XptCommand implements TabExecutor {
                 .append(Component.text(" — chest(s) with all fragments", NamedTextColor.GRAY)));
         message(sender, Component.text("/xpt bind", NamedTextColor.YELLOW)
                 .append(Component.text(" — open the EtchLoom GUI", NamedTextColor.GRAY)));
+        message(sender, Component.text("/xpt book", NamedTextColor.YELLOW)
+                .append(Component.text(" — open the tutorial book", NamedTextColor.GRAY)));
         message(sender, Component.text("/xpt help", NamedTextColor.YELLOW)
                 .append(Component.text(" — this overview", NamedTextColor.GRAY)));
     }

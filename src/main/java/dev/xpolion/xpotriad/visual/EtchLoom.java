@@ -46,11 +46,9 @@ public final class EtchLoom {
     );
 
     private final ChestGui chestGui;
-    private final String tutorialCommand;
 
-    public EtchLoom(Plugin plugin, String tutorialCommand) {
+    public EtchLoom(Plugin plugin) {
         Objects.requireNonNull(plugin, "plugin");
-        this.tutorialCommand = Objects.requireNonNull(tutorialCommand, "tutorialCommand");
 
         this.chestGui = new ChestGui(plugin, item -> {
             Fragment fragment = FragmentItem.getFragment(item);
@@ -60,10 +58,6 @@ public final class EtchLoom {
 
             return item;
         });
-    }
-
-    public EtchLoom(Plugin plugin) {
-        this(plugin, "XpoTriad");
     }
 
     public void open(Player player) {
@@ -140,7 +134,7 @@ public final class EtchLoom {
                 this::onEngrave
         );
 
-        // Tutorial button
+        // Tutorial button - opens the book in place (no item is given)
         session.button(
                 9,
                 6,
@@ -148,7 +142,10 @@ public final class EtchLoom {
                         Material.WRITTEN_BOOK,
                         Component.text("Tutorial", NamedTextColor.GOLD)
                 ),
-                tutorialCommand
+                (bookViewer, bookSession) -> {
+                    TutorialBook.open(bookViewer);
+                    return false;
+                }
         );
 
         session.open();
