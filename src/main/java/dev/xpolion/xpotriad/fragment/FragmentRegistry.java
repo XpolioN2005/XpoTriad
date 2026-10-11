@@ -14,6 +14,8 @@ import dev.xpolion.xpotriad.fragment.fragments.CleanseFragment;
 import dev.xpolion.xpotriad.fragment.fragments.DelayFragment;
 import dev.xpolion.xpotriad.fragment.fragments.ExplosionFragment;
 import dev.xpolion.xpotriad.fragment.fragments.ExecutionFragment;
+import dev.xpolion.xpotriad.fragment.fragments.AreaPoisonFragment;
+import dev.xpolion.xpotriad.fragment.fragments.BlindFragment;
 import dev.xpolion.xpotriad.fragment.fragments.GravityPullFragment;
 import dev.xpolion.xpotriad.fragment.fragments.HealFragment;
 import dev.xpolion.xpotriad.fragment.fragments.HoundCallFragment;
@@ -34,6 +36,7 @@ import dev.xpolion.xpotriad.fragment.fragments.SlowFallingFragment;
 import dev.xpolion.xpotriad.fragment.fragments.SmokeBombFragment;
 import dev.xpolion.xpotriad.fragment.fragments.SoulLinkFragment;
 import dev.xpolion.xpotriad.fragment.fragments.SpeedFragment;
+import dev.xpolion.xpotriad.fragment.fragments.ShockwaveFragment;
 import dev.xpolion.xpotriad.fragment.fragments.SwapFragment;
 import dev.xpolion.xpotriad.fragment.fragments.WeakeningFragment;
 
@@ -118,10 +121,12 @@ public final class FragmentRegistry {
         register(new SmokeBombFragment());
         register(new SlowFallingFragment());
         register(new DelayFragment());
+        register(new BlindFragment());
 
         // --- UNCOMMON ---
         register(new CleanseFragment());
         register(new LevitationFragment());
+        register(new AreaPoisonFragment());
 
         // --- RARE ---
         register(new GravityPullFragment());
@@ -136,6 +141,7 @@ public final class FragmentRegistry {
         register(new LifeStealFragment());
         register(new SwapFragment());
         register(new SoulLinkFragment());
+        register(new ShockwaveFragment());
 
         // --- LEGENDARY ---
         register(new RewindFragment());

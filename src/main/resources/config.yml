@@ -62,6 +62,9 @@ fragments:
   weakening:
     execution-time-ticks: 10      # MELEE
     cooldown-modifier-ticks: 3
+  blind:
+    execution-time-ticks: 10      # MELEE
+    cooldown-modifier-ticks: 0
 
   # ===== UNCOMMON =====
   cleanse:
@@ -73,6 +76,9 @@ fragments:
   levitation:
     execution-time-ticks: 10      # RANGED
     cooldown-modifier-ticks: 6
+  area_poison:
+    execution-time-ticks: 10      # RANGED
+    cooldown-modifier-ticks: 8
 
   # ===== RARE =====
   barrier:
@@ -113,6 +119,9 @@ fragments:
   swap:
     execution-time-ticks: 8       # MELEE
     cooldown-modifier-ticks: 14
+  shockwave:
+    execution-time-ticks: 5       # MELEE
+    cooldown-modifier-ticks: 15
 
   # ===== LEGENDARY =====
   cheat_death:
@@ -148,10 +157,12 @@ effects:
   slow_falling:    { potion-duration-ticks: 100, amplifier: 0 }
   smoke_bomb:      { duration-ticks: 100 }
   weakness:        { potion-duration-ticks: 100, amplifier: 0 }
+  blind:           { radius: 6.0, potion-duration-ticks: 60, amplifier: 0 }
 
   # ===== UNCOMMON =====
   invisibility:    { potion-duration-ticks: 100, amplifier: 0 }
   levitation:      { potion-duration-ticks: 60, amplifier: 0 }
+  area_poison:     { radius: 4.0, potion-duration-ticks: 100, amplifier: 0, cloud-duration-ticks: 100 }
 
   # ===== RARE =====
   barrier:         { radius: 3.0, duration-ticks: 100 }
@@ -168,6 +179,7 @@ effects:
   reflect:         { duration-ticks: 80 }
   soul_link:       { duration-ticks: 100, transfer-ratio: 0.3 }
   swap:            {}
+  shockwave:       { radius-per-block: 0.5, max-radius: 8.0, min-fall-distance: 3.0, ground-scan-distance: 64.0, damage: 6.0, knockback-strength: 1.2, slam-ticks: 5, ring-duration-ticks: 20, failsafe-ticks: 60 }
 
   # ===== LEGENDARY =====
   cheat_death:     { duration-ticks: 40 }   # full immunity
