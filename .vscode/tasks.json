@@ -2,19 +2,26 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Build XpoTriad",
+			"label": "Build XpoTriad (PowerShell)",
 			"type": "shell",
-			"command": "if (Test-Path build) { Remove-Item build -Recurse -Force }; New-Item -ItemType Directory -Force build/classes | Out-Null; $classpath = (Get-ChildItem lib -Filter '*.jar' | ForEach-Object { $_.FullName }) -join ';'; if (-not $classpath) { throw 'No JARs found in lib/' }; $sources = Get-ChildItem src/main/java -Recurse -Filter '*.java' | ForEach-Object { $_.FullName }; javac -cp $classpath -d build/classes $sources; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Copy-Item src/main/resources/plugin.yml build/classes/; Copy-Item src/main/resources/config.yml build/classes/; jar -cf build/XpoTriad.jar -C build/classes .",
+			"command": "powershell -NoProfile -ExecutionPolicy Bypass -File ${workspaceFolder}/build.ps1",
 			"options": {
 				"cwd": "${workspaceFolder}",
 				"shell": {
 					"executable": "powershell.exe"
 				}
 			},
-			"group": {
-				"kind": "build",
-				"isDefault": true
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "Build XpoTriad (bash)",
+			"type": "shell",
+			"command": "bash ${workspaceFolder}/build.sh",
+			"options": {
+				"cwd": "${workspaceFolder}"
 			},
+			"group": "build",
 			"problemMatcher": []
 		}
 	]
