@@ -52,6 +52,21 @@ public final class KnockbackEffect implements Effect {
         }
 
         if (target == null) {
+            // No target: play the same gust from just in front of the caster,
+            // streaking along their facing, so the swing still reads.
+            Vector facing = source.getLocation().getDirection().clone();
+            facing.setY(0.0);
+
+            if (facing.lengthSquared() < 1.0E-4) {
+                facing = new Vector(1.0, 0.0, 0.0);
+            }
+
+            facing.normalize();
+            Location origin = source.getLocation()
+                    .add(facing.clone().multiply(1.5))
+                    .add(0, 1.0, 0);
+
+            playGust(origin, facing);
             return;
         }
 
@@ -78,18 +93,27 @@ public final class KnockbackEffect implements Effect {
         }
 
         Vector finalDirection = direction.normalize();
+        playGust(target.getLocation().add(0, 1.0, 0), finalDirection);
+    }
+
+    /**
+     * The knockback gust: a dust burst at {@code origin} with dust briefly
+     * spreading along {@code direction}. Shared by the hit and miss paths so
+     * both look identical.
+     */
+    private void playGust(Location origin, Vector direction) {
         Main plugin = JavaPlugin.getPlugin(Main.class);
 
         plugin.getParticleSystem().play(animationContext -> {
-            Location origin = animationContext.getOrigin();
+            Location animOrigin = animationContext.getOrigin();
 
-            if (origin.getWorld() == null) {
+            if (animOrigin.getWorld() == null) {
                 return;
             }
 
-            origin.getWorld().spawnParticle(
+            animOrigin.getWorld().spawnParticle(
                     Particle.DUST,
-                    origin,
+                    animOrigin,
                     12,
                     0.3, 0.3, 0.3,
                     0.0,
@@ -97,15 +121,15 @@ public final class KnockbackEffect implements Effect {
             );
 
             for (int i = 1; i <= 3; i++) {
-                origin.getWorld().spawnParticle(
+                animOrigin.getWorld().spawnParticle(
                         Particle.DUST,
-                        origin.clone().add(finalDirection.clone().multiply(i * 0.5)),
+                        animOrigin.clone().add(direction.clone().multiply(i * 0.5)),
                         4,
                         0.1, 0.1, 0.1,
                         0.0,
                         DUST_WHITE
                 );
             }
-        }, target.getLocation().add(0, 1.0, 0));
+        }, origin);
     }
 }

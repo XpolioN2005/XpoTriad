@@ -6,6 +6,7 @@ import dev.xpolion.xpotriad.config.BalanceConfig;
 import dev.xpolion.xpotriad.effect.Effect;
 import dev.xpolion.xpotriad.runtime.states.MassFreezeState;
 import dev.xpolion.xpotriad.targeting.TargetResolver;
+import dev.xpolion.xpotriad.particle.animations.MassFreezeRingAnimation;
 
 import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;
@@ -41,11 +42,19 @@ public final class MassFreezeEffect implements Effect {
 
         List<LivingEntity> frozen = TargetResolver.entitiesNear(center, areaRadius, source);
 
-        if (frozen.isEmpty()) {
-            return; // Nothing to freeze — no runtime, no visuals.
-        }
-
         Main plugin = JavaPlugin.getPlugin(Main.class);
+        double durationSeconds = durationTicks / 20.0;
+
+        if (frozen.isEmpty()) {
+            // No entities caught, but the ring still fires so the cast reads.
+            // Same animation, radius and duration as the hit path.
+            plugin.getParticleSystem().playPersistent(
+                    new MassFreezeRingAnimation(areaRadius),
+                    center,
+                    durationSeconds
+            );
+            return;
+        }
 
         MassFreezeState state = new MassFreezeState(
                 source,
