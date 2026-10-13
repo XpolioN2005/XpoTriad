@@ -58,7 +58,7 @@ public final class Main extends JavaPlugin {
                 this
         );
 
-        XptCommand xptCommand = new XptCommand(this, etchLoom);
+        XptCommand xptCommand = new XptCommand(this);
         getCommand("xpt").setExecutor(xptCommand);
         getCommand("xpt").setTabCompleter(xptCommand);
 

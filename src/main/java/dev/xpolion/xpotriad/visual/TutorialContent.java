@@ -176,9 +176,6 @@ public final class TutorialContent {
             "<dark_blue>/xpt book</> reopens",
             "this book.",
             "",
-            "<dark_blue>/xpt test</> gives a",
-            "chest of fragments.",
-            "",
             "<dark_blue>/xpt help</> lists all",
             "commands."
     );
